@@ -75,7 +75,7 @@ class AlundraClient(BizHawkClient):
                                                         ctx.player_names[item.player])
 
     async def game_watcher(self, ctx: "BizHawkClientContext") -> None:
-        from worlds._bizhawk import ConnectionClosedError, RequestFailedError
+        from worlds._bizhawk import RequestFailedError
         if ctx.slot is None:
             return
 
@@ -93,7 +93,7 @@ class AlundraClient(BizHawkClient):
         received = [core.ReceivedItem(item.item, item.location, item.player) for item in ctx.items_received]
         try:
             result = await self.sync.step(BizHawkMemory(ctx), received, set(ctx.checked_locations))
-        except (RequestFailedError, ConnectionClosedError):
+        except RequestFailedError:
             return
 
         if result.new_locations:
