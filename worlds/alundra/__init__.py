@@ -10,16 +10,14 @@ from . import data
 from .options import AlundraOptions
 from .settings import AlundraSettings
 
-# Registers the client and the patcher in the launcher
-from . import client as client, patch as patch
+from . import client as client  # registers the client in the launcher
+from .patch import AlundraPatch
 
 CLASSIFICATIONS = {
     "progression": ItemClassification.progression,
     "useful": ItemClassification.useful,
     "filler": ItemClassification.filler,
 }
-
-PATCH_EXTENSION = ".apalundra"
 
 
 class AlundraItem(Item):
@@ -153,9 +151,11 @@ class AlundraWorld(World):
             "player_name": self.player_name,
             "locations": locations,
         }
-        file_name = self.multiworld.get_out_file_name_base(self.player) + PATCH_EXTENSION
-        with open(os.path.join(output_directory, file_name), "w", encoding="utf-8") as file:
-            json.dump(patch_data, file)
+        patch = AlundraPatch(os.path.join(output_directory, self.multiworld.get_out_file_name_base(self.player)
+                                          + AlundraPatch.patch_file_ending),
+                             player=self.player, player_name=self.player_name,
+                             patch_data=json.dumps(patch_data).encode("utf-8"))
+        patch.write()
 
     def fill_slot_data(self) -> Mapping[str, Any]:
         return {"version": 1}

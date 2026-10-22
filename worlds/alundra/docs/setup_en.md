@@ -17,8 +17,8 @@
 
 ## Building your game
 
-Open your `.apalundra` file with the launcher. It runs the "Alundra Patcher" and writes a `.bin` and a `.cue` next to
-it.
+Open your `.apalundra` file with the launcher (it opens the BizHawk Client). The client runs the randomizer program and writes a `.bin` and a `.cue` next to
+
 
 ## Playing
 
