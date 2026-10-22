@@ -9,8 +9,7 @@
 ## Configuring your game
 
 1. Run the Archipelago launcher once to create `host.yaml`, then set `alundra_settings` in it: `rom_file` is your
-   `.bin` file. The game is built by a patcher included in the world, nothing else is needed. If you prefer the Java
-   randomizer, set `use_java_randomizer: true` and `randomizer_jar` to `alundra-randomizer.jar` (needs Java 17 or later).
+   `.bin` file. The game is built by a patcher included in the world, nothing else is needed.
 2. Export your YAML from the options page, or use the template provided by the launcher, and give it to the person
    generating the multiworld.
 

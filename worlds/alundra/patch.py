@@ -1,19 +1,11 @@
-"""Builds the patched game from the patch file written during generation (in Python, or with the Java randomizer)."""
-import logging
+"""Builds the patched game from the patch file written during generation."""
 import os
-import subprocess
-import tempfile
 import zipfile
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from worlds.Files import APAutoPatchInterface
 
 from . import pypatch
-
-if TYPE_CHECKING:
-    from .settings import AlundraSettings
-
-logger = logging.getLogger("Alundra")
 
 PATCH_DATA_FILE = "alundra.json"
 
@@ -21,7 +13,7 @@ PATCH_DATA_FILE = "alundra.json"
 class AlundraPatch(APAutoPatchInterface):
     game = "Alundra"
     patch_file_ending = ".apalundra"
-    # The randomizer writes a .bin next to it, the .cue is what the emulator opens
+    # The patcher writes a .bin next to it, the .cue is what the emulator opens
     result_file_ending = ".cue"
 
     patch_data: bytes = b""
@@ -44,33 +36,9 @@ class AlundraPatch(APAutoPatchInterface):
         from . import AlundraWorld
 
         self.read()
-        settings = AlundraWorld.settings
-        disc = settings.rom_file.resolve()
+        disc = AlundraWorld.settings.rom_file.resolve()
         if not os.path.isfile(disc):
             raise FileNotFoundError(f"Set alundra_settings.rom_file in your host.yaml: '{disc}' doesn't exist")
-        output = os.path.splitext(target)[0] + ".bin"
-
-        if not settings.use_java_randomizer and pypatch.available():
-            pypatch.build_game(str(disc), self.patch_data, output)
-        else:
-            self._patch_with_java(settings, str(disc), output)
+        pypatch.build_game(str(disc), self.patch_data, os.path.splitext(target)[0] + ".bin")
         if not os.path.isfile(target):
             raise FileNotFoundError(f"The patcher didn't write '{target}'")
-
-    def _patch_with_java(self, settings: "AlundraSettings", disc: str, output: str) -> None:
-        jar = settings.randomizer_jar.resolve()
-        if not os.path.isfile(jar):
-            raise FileNotFoundError(f"Set alundra_settings.randomizer_jar in your host.yaml: '{jar}' doesn't exist")
-
-        with tempfile.TemporaryDirectory() as directory:
-            patch_file = os.path.join(directory, PATCH_DATA_FILE)
-            with open(patch_file, "wb") as file:
-                file.write(self.patch_data)
-
-            command = ["java", "-jar", str(jar), f"--archipelago={patch_file}", f"--input={disc}",
-                       f"--outputrom={output}"]
-            logger.info("Running %s", " ".join(command))
-            result = subprocess.run(command, capture_output=True, text=True)
-            logger.info(result.stdout)
-            if result.returncode != 0:
-                raise RuntimeError(f"The randomizer failed:{BS}n{result.stdout}{BS}n{result.stderr}")
