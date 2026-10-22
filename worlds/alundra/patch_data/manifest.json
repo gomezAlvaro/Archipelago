@@ -1,0 +1,49 @@
+{
+ "datas_file": "DATA/DATAS.BIN",
+ "exe_file": "ALUN_CD.EXE",
+ "files": {
+  "ALUN_CD.EXE": {
+   "format": "bsdiff",
+   "patch": "ALUN_CD.EXE.patch",
+   "original_size": 706560,
+   "original_crc": 4182298776
+  },
+  "SLUS_005.53": {
+   "format": "runs",
+   "patch": "SLUS_005.53.patch",
+   "original_size": 1241088,
+   "original_crc": 3992654610
+  },
+  "CLOSING.EXE": {
+   "format": "runs",
+   "patch": "CLOSING.EXE.patch",
+   "original_size": 1626112,
+   "original_crc": 4168309121
+  },
+  "END.EXE": {
+   "format": "runs",
+   "patch": "END.EXE.patch",
+   "original_size": 245760,
+   "original_crc": 2260371368
+  },
+  "DATA/BALANCE.BIN": {
+   "format": "bsdiff",
+   "patch": "DATA_BALANCE.BIN.patch",
+   "original_size": 11169,
+   "original_crc": 1163161522
+  },
+  "DATA/ETC_USA.R": {
+   "format": "bsdiff",
+   "patch": "DATA_ETC_USA.R.patch",
+   "original_size": 10271,
+   "original_crc": 1877349303
+  },
+  "DATA/DATAS.BIN": {
+   "format": "runs",
+   "patch": "DATA_DATAS.BIN.patch",
+   "original_size": 108949504,
+   "original_crc": 837951053
+  }
+ },
+ "mailbox_offset": 3904
+}
