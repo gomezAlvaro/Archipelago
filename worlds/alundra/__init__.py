@@ -1,17 +1,25 @@
+import json
+import os
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, ClassVar
 
-from BaseClasses import Entrance, Item, ItemClassification, Location, Region, Tutorial
+from BaseClasses import Item, ItemClassification, Location, Region, Tutorial
 from worlds.AutoWorld import WebWorld, World
 
 from . import data
 from .options import AlundraOptions
+from .settings import AlundraSettings
+
+# Registers the client and the patcher in the launcher
+from . import client as client, patch as patch
 
 CLASSIFICATIONS = {
     "progression": ItemClassification.progression,
     "useful": ItemClassification.useful,
     "filler": ItemClassification.filler,
 }
+
+PATCH_EXTENSION = ".apalundra"
 
 
 class AlundraItem(Item):
@@ -44,9 +52,11 @@ class AlundraWorld(World):
 
     options_dataclass = AlundraOptions
     options: AlundraOptions
+    settings_key = "alundra_settings"
+    settings: ClassVar[AlundraSettings]
 
-    item_name_to_id = {name: item_id for name, (item_id, _) in data.ITEMS.items()}
-    location_name_to_id = {name: location_id for name, (location_id, _) in data.LOCATIONS.items()}
+    item_name_to_id = {name: item_id for name, (item_id, _, _) in data.ITEMS.items()}
+    location_name_to_id = {name: location_id for name, (location_id, _, _) in data.LOCATIONS.items()}
     item_name_groups = {"Crests": set(data.CRESTS)}
 
     origin_region_name = data.START_REGION
@@ -55,15 +65,20 @@ class AlundraWorld(World):
         self.entrance_names: dict[str, int] = {}
 
     def create_item(self, name: str) -> AlundraItem:
-        return AlundraItem(name, CLASSIFICATIONS[data.ITEMS[name][1]], data.ITEMS[name][0], self.player)
+        item_id, classification, _ = data.ITEMS[name]
+        return AlundraItem(name, CLASSIFICATIONS[classification], item_id, self.player)
 
     def create_regions(self) -> None:
         regions = {name: Region(name, self.player, self.multiworld) for name in data.REGIONS}
 
-        for name, (_, region) in data.LOCATIONS.items():
-            location = AlundraLocation(self.player, name, self.location_name_to_id[name], regions[region])
-            if name in data.NO_PROGRESSION_LOCATIONS:
-                location.item_rule = lambda item: not item.advancement
+        for name, (location_id, region, _) in data.LOCATIONS.items():
+            regions[region].locations.append(AlundraLocation(self.player, name, location_id, regions[region]))
+
+        # Item sources the client cannot track keep their vanilla item
+        for name, (region, item_name) in data.LOCKED_LOCATIONS.items():
+            location = AlundraLocation(self.player, name, None, regions[region])
+            item_id, classification, _ = data.ITEMS[item_name]
+            location.place_locked_item(AlundraItem(item_name, CLASSIFICATIONS[classification], None, self.player))
             regions[region].locations.append(location)
 
         for source, target, two_way, items, required_regions in data.PATHS:
@@ -98,15 +113,22 @@ class AlundraWorld(World):
             self.multiworld.push_precollected(self.create_item(name))
 
         pool = dict(data.ITEM_POOL)
-        for location_name, item_name in data.FIXED_LOCATIONS.items():
-            self.get_location(location_name).place_locked_item(self.create_item(item_name))
-            pool[item_name] -= 1
         for crest in data.CRESTS:
-            pool[crest] = 1
+            pool[crest] = pool.get(crest, 0) + 1
+        # Items already placed in the locations that keep their vanilla item are not part of the pool
+        for _, item_name in data.LOCKED_LOCATIONS.values():
+            if pool.get(item_name, 0) > 0:
+                pool[item_name] -= 1
 
         itempool = [self.create_item(name) for name, count in pool.items() for _ in range(count)]
         unfilled = len(self.multiworld.get_unfilled_locations(self.player)) - len(itempool)
-        itempool += [self.create_filler() for _ in range(unfilled)]
+        if unfilled < 0:
+            # Too many items: drop filler
+            filler = [item for item in itempool if item.classification == ItemClassification.filler]
+            for item in filler[:-unfilled]:
+                itempool.remove(item)
+        else:
+            itempool += [self.create_filler() for _ in range(unfilled)]
         self.multiworld.itempool += itempool
 
     def set_rules(self) -> None:
@@ -115,5 +137,25 @@ class AlundraWorld(World):
     def get_filler_item_name(self) -> str:
         return self.random.choice(["Herbs", "10 Gilder", "30 Gilder"])
 
+    def generate_output(self, output_directory: str) -> None:
+        """Writes the file the player gives to the patcher in order to build their game."""
+        locations = []
+        for name in data.LOCATIONS:
+            item = self.get_location(name).item
+            # Items of other worlds are shown as a placeholder in the game
+            locations.append({"name": name, "item": item.name if item.player == self.player else None})
+
+        patch_data = {
+            "game": self.game,
+            "format": 1,
+            "seed_name": self.multiworld.seed_name,
+            "player": self.player,
+            "player_name": self.player_name,
+            "locations": locations,
+        }
+        file_name = self.multiworld.get_out_file_name_base(self.player) + PATCH_EXTENSION
+        with open(os.path.join(output_directory, file_name), "w", encoding="utf-8") as file:
+            json.dump(patch_data, file)
+
     def fill_slot_data(self) -> Mapping[str, Any]:
-        return {}
+        return {"version": 1}
