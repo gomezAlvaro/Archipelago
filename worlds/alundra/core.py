@@ -33,6 +33,9 @@ HUD_FLAG = 0x67E  # set as soon as a game is running (new game or loaded save)
 INVENTORY_BASE = 0x801DD82E
 COUNTER_ITEM_ID = 0x3A
 COUNTER_ADDRESS = INVENTORY_BASE + COUNTER_ITEM_ID * 4 + 2
+INVENTORY_SIZE = COUNTER_ITEM_ID * 4
+# Number of consecutive polls where the memory must look like a started game before it is trusted
+STABLE_POLLS = 3
 
 # Location ID the server uses for the items of the starting inventory
 STARTING_INVENTORY_LOCATION = -2
@@ -87,12 +90,14 @@ class AlundraSync:
         self.announced: set[int] = set()
         self.messages: list[bytes] = []
         self.last_message_time = 0.0
+        self.stable_polls = 0
 
     def reset(self) -> None:
         """To call when the client (re)connects to the server"""
         self.checked.clear()
         self.announced.clear()
         self.messages.clear()
+        self.stable_polls = 0
 
     def _is_given_by_game(self, item: ReceivedItem) -> bool:
         """
@@ -110,6 +115,15 @@ class AlundraSync:
 
         flags = await memory.read(FLAGS_BASE, FLAGS_SIZE)
         if not flag_is_set(flags, HUD_FLAG):
+            return SyncResult("Waiting for a game to start")
+        # While a game is loading, this memory holds other data (the flags and the inventory look like noise). A real
+        # inventory has small quantities (the upper byte of each one is 0) and always holds the starting items.
+        inventory = await memory.read(INVENTORY_BASE, INVENTORY_SIZE)
+        if any(inventory[3::4]) or not any(inventory[2::4]):
+            self.stable_polls = 0
+        else:
+            self.stable_polls += 1
+        if self.stable_polls < STABLE_POLLS:
             return SyncResult("Waiting for a game to start")
 
         result = SyncResult()

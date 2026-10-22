@@ -54,14 +54,36 @@ class TestSync(unittest.TestCase):
         self.memory = FakeMemory()
         self.memory.inventory = []
         self.memory.set_flag(core.HUD_FLAG)
+        self.memory.write_at(core.INVENTORY_BASE + 4 + 2, b"\1\0")  # a started game holds its starting items
         self.sync = make_sync()
         self.sync.last_message_time = 0
+        self.sync.stable_polls = core.STABLE_POLLS
 
     def test_waits_for_a_patched_game(self) -> None:
         memory = FakeMemory()
         memory.write_at(core.MAILBOX, b"\0\0\0\0")
         result = run(self.sync.step(memory, [], set()))
         self.assertNotEqual(result.status, "ok")
+
+    def test_ignores_the_noise_left_while_loading(self) -> None:
+        memory = FakeMemory()
+        memory.write_at(core.MAILBOX, core.MAILBOX_MAGIC)
+        memory.write_at(core.FLAGS_BASE, b"\xFF" * core.FLAGS_SIZE)
+        memory.write_at(core.INVENTORY_BASE, bytes(range(1, 200)))
+        sync = make_sync()
+        for _ in range(core.STABLE_POLLS + 2):
+            result = run(sync.step(memory, [], set()))
+            self.assertEqual(result.status, "Waiting for a game to start")
+            self.assertFalse(result.new_locations)
+
+    def test_trusts_a_started_game_after_a_few_polls(self) -> None:
+        memory = FakeMemory()
+        memory.write_at(core.MAILBOX, core.MAILBOX_MAGIC)
+        memory.set_flag(core.HUD_FLAG)
+        memory.write_at(core.INVENTORY_BASE + 4 + 2, b"\1\0")
+        sync = make_sync()
+        statuses = [run(sync.step(memory, [], set())).status for _ in range(core.STABLE_POLLS)]
+        self.assertEqual(statuses, ["Waiting for a game to start"] * (core.STABLE_POLLS - 1) + ["ok"])
 
     def test_waits_for_a_running_game(self) -> None:
         memory = FakeMemory()
