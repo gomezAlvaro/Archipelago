@@ -39,7 +39,6 @@ class AlundraClient(BizHawkClient):
         self.sync: core.AlundraSync | None = None
         self.slot_name = ""
         self.seed_name = ""
-        self.scouted = False
 
     async def validate_rom(self, ctx: "BizHawkClientContext") -> bool:
         from worlds._bizhawk import RequestFailedError, read
@@ -67,12 +66,6 @@ class AlundraClient(BizHawkClient):
                 logger.warning("This game was built for another multiworld (%s), not for %s",
                                self.seed_name, ctx.seed_name)
             self.sync = None
-            self.scouted = False
-        elif cmd == "LocationInfo" and self.sync:
-            for item in args["locations"]:
-                if item.player != ctx.slot:
-                    self.sync.scouted[item.location] = (ctx.item_names.lookup_in_slot(item.item, item.player),
-                                                        ctx.player_names[item.player])
 
     async def game_watcher(self, ctx: "BizHawkClientContext") -> None:
         from worlds._bizhawk import RequestFailedError
@@ -84,11 +77,6 @@ class AlundraClient(BizHawkClient):
                 ctx.slot,
                 lambda item_id: ctx.item_names.lookup_in_slot(item_id, ctx.slot),
                 lambda player: ctx.player_names[player])
-
-        if not self.scouted:
-            self.scouted = True
-            await ctx.send_msgs([{"cmd": "LocationScouts", "locations": sorted(self.sync.location_ids),
-                                  "create_as_hint": 0}])
 
         received = [core.ReceivedItem(item.item, item.location, item.player) for item in ctx.items_received]
         try:
