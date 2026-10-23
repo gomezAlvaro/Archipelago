@@ -7,7 +7,8 @@ from .. import disc, exe_hooks, pypatch
 
 class TestRuns(unittest.TestCase):
     def test_apply_runs(self) -> None:
-        patch = pypatch.RUNS_MAGIC + struct.pack("<I", 2) + struct.pack("<II", 1, 2) + b"ab" + struct.pack("<II", 6, 1) + b"z"
+        patch = (pypatch.RUNS_MAGIC + struct.pack("<I", 2) + struct.pack("<II", 1, 2) + b"ab"
+                 + struct.pack("<II", 6, 1) + b"z")
         self.assertEqual(pypatch.apply_runs(b"0123456789", patch), bytearray(b"0ab345z789"))
 
     def test_invalid_patch(self) -> None:
@@ -46,11 +47,13 @@ class TestBuildGame(unittest.TestCase):
     def test_build(self) -> None:
         import json
         import tempfile
+
         from .. import data
         names = list(data.LOCATIONS)
         patch = {"seed_name": "seed", "player_name": "Quester",
                  "locations": [{"name": n, "item": "Herbs"} if i % 2 else
-                                 {"name": n, "item": None, "name_of_item": "Hookshot of the Wind Waker, long", "recipient": "Link",
+                                 {"name": n, "item": None, "name_of_item": "Hookshot of the Wind Waker, long",
+                                  "recipient": "Link",
                                   **({"sprite": "Herbs"} if i % 4 == 0 else {})}
                                  for i, n in enumerate(names)]}
         with tempfile.TemporaryDirectory() as directory:

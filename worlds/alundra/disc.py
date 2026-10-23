@@ -7,6 +7,7 @@ A replaced file is written in place of its original extent. If it needs more sec
 following sector is shifted. Directory records, path tables and the volume descriptor are updated to the new
 locations and sizes, and sector headers and error correction codes are regenerated where needed.
 """
+import itertools
 import os
 import struct
 from typing import BinaryIO, NamedTuple
@@ -292,7 +293,7 @@ class IsoRebuilder:
             # Never shrink extents: a smaller file is padded inside its original space to avoid moving other files
             result.append(_Replacement(entry, contents, max(needed, entry.sector_count)))
         result.sort(key=lambda r: r.start)
-        for previous, current in zip(result, result[1:]):
+        for previous, current in itertools.pairwise(result):
             if current.start < previous.end:
                 raise DiscError("Overlapping files cannot be replaced at the same time")
         return result

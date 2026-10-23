@@ -146,7 +146,7 @@ def apply_seed(files: dict[str, bytearray], manifest: dict[str, Any], patch: dic
         files[manifest["exe_file"]] = exe_hooks.install(
             files[manifest["exe_file"]], patch["player_name"], patch["seed_name"], item_box_texts(patch))
     except exe_hooks.ExeError as error:
-        raise DiscError(f"The patch data of the Alundra world is corrupted ({error})")
+        raise DiscError(f"The patch data of the Alundra world is corrupted ({error})") from error
 
 
 def build_game(input_bin: str, patch_json: bytes, output_bin: str) -> str:

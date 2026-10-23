@@ -6,12 +6,11 @@ from typing import Any, ClassVar
 from BaseClasses import Item, ItemClassification, Location, Region, Tutorial
 from worlds.AutoWorld import WebWorld, World
 
+from . import client as client  # registers the client in the launcher
 from . import data
 from .options import AlundraOptions
-from .settings import AlundraSettings
-
-from . import client as client  # registers the client in the launcher
 from .patch import AlundraPatch
+from .settings import AlundraSettings
 
 CLASSIFICATIONS = {
     "progression": ItemClassification.progression,
@@ -29,7 +28,7 @@ class AlundraLocation(Location):
 
 
 class AlundraWeb(WebWorld):
-    tutorials = [Tutorial(
+    tutorials: ClassVar[list[Tutorial]] = [Tutorial(
         "Multiworld Setup Guide",
         "A guide to playing Alundra with Archipelago.",
         "English",
@@ -53,9 +52,10 @@ class AlundraWorld(World):
     settings_key = "alundra_settings"
     settings: ClassVar[AlundraSettings]
 
-    item_name_to_id = {name: item_id for name, (item_id, _, _) in data.ITEMS.items()}
-    location_name_to_id = {name: location_id for name, (location_id, _, _) in data.LOCATIONS.items()}
-    item_name_groups = {"Crests": set(data.CRESTS)}
+    item_name_to_id: ClassVar[dict[str, int]] = {name: item_id for name, (item_id, _, _) in data.ITEMS.items()}
+    location_name_to_id: ClassVar[dict[str, int]] = {
+        name: location_id for name, (location_id, _, _) in data.LOCATIONS.items()}
+    item_name_groups: ClassVar[dict[str, set[str]]] = {"Crests": set(data.CRESTS)}
 
     origin_region_name = data.START_REGION
 
@@ -63,7 +63,8 @@ class AlundraWorld(World):
         self.entrance_names: dict[str, int] = {}
 
     def create_item(self, name: str) -> AlundraItem:
-        item_id, classification, _ = data.ITEMS[name]
+        _, classification, _ = data.ITEMS[name]
+        item_id = data.ITEMS[name][0]
         return AlundraItem(name, CLASSIFICATIONS[classification], item_id, self.player)
 
     def create_regions(self) -> None:
@@ -75,7 +76,7 @@ class AlundraWorld(World):
         # Item sources the client cannot track keep their vanilla item
         for name, (region, item_name) in data.LOCKED_LOCATIONS.items():
             location = AlundraLocation(self.player, name, None, regions[region])
-            item_id, classification, _ = data.ITEMS[item_name]
+            _, classification, _ = data.ITEMS[item_name]
             location.place_locked_item(AlundraItem(item_name, CLASSIFICATIONS[classification], None, self.player))
             regions[region].locations.append(location)
 

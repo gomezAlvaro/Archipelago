@@ -125,7 +125,7 @@ class TestSync(unittest.TestCase):
         self.assertEqual(self.memory.inventory, [SWORD[2]])
 
     def test_does_not_give_items_a_chest_already_gave(self) -> None:
-        location_id, _, flag = FIRST_LOCATION
+        location_id, _, _ = FIRST_LOCATION
         received = [core.ReceivedItem(SWORD[0], location_id, 1)]
         run(self.sync.step(self.memory, received, set()))
         self.memory.game_processes_mailbox()
@@ -157,5 +157,5 @@ class TestSync(unittest.TestCase):
         self.assertTrue(run(self.sync.step(self.memory, [], set())).goal_reached)
 
     def test_text_is_plain_ascii(self) -> None:
-        self.assertEqual(core.clean_text("Ünïcode ~ \ ok"), b"?n?code ? ? ok")
+        self.assertEqual(core.clean_text(r"Ünïcode ~ \ ok"), b"?n?code ? ? ok")
         self.assertEqual(len(core.clean_text("x" * 500)), core.MESSAGE_MAX_LENGTH)

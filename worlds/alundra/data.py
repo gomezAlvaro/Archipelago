@@ -140,12 +140,18 @@ LOCATIONS = {
     "Overworld B2: Chest hidden behind musician's house": (2701135933, "overworld_b2", 1761),
     "Overworld B2: Chest near the pond": (2701135934, "overworld_b2", 1760),
     "Overworld B2: First upper mines chest": (2701135935, "overworld_b2_upper_mines", 1688),
-    "Overworld B2: Chest falling after beating 50 slimes in upper mines": (2701135936, "overworld_b2_upper_mines", 1687),
+    "Overworld B2: Chest falling after beating 50 slimes in upper mines": (
+        2701135936, "overworld_b2_upper_mines", 1687
+    ),
     "Overworld B2: Chest in house near Coal Mine": (2701135937, "overworld_b2_upper_mines", 1695),
     "Overworld B2: Chest near Coal Mine back exit": (2701135938, "overworld_b2_left", 1390),
     "Overworld A4: Chest behind Fire Manor": (2701135939, "overworld_a4_behind_manor", 1768),
-    "Overworld A4: Chest in cave on the way to Fire Manor rewarded for beating circle of fishes": (2701135940, "overworld_a4_manor_caves", 1777),
-    "Overworld A4: Chest in left branch of final cave before Fire Manor": (2701135941, "overworld_a4_manor_caves_behind_flail", 1776),
+    "Overworld A4: Chest in cave on the way to Fire Manor rewarded for beating circle of fishes": (
+        2701135940, "overworld_a4_manor_caves", 1777
+    ),
+    "Overworld A4: Chest in left branch of final cave before Fire Manor": (
+        2701135941, "overworld_a4_manor_caves_behind_flail", 1776
+    ),
     "Fire Manor: Reward chest": (2701135942, "fire_manor", 1543),
     "Overworld A3: Elevated chest at top-left corner": (2701135943, "overworld_a3_left", 1794),
     "Overworld A3: Lower chest in left ruins": (2701135944, "overworld_a3_left_behind_merman", 1774),
@@ -194,7 +200,9 @@ LOCATIONS = {
     "Overworld E4: Lower chest in the well": (2701135987, "overworld_e4_well", 1680),
     "Overworld E4: Upper chest in the well": (2701135988, "overworld_e4_well_behind_vines", 1679),
     "Overworld B2: First chest in cave to lake": (2701135989, "overworld_b2_cave_to_lake", 1670),
-    "Overworld B2: Chest behind deep water in cave to lake": (2701135990, "overworld_b2_cave_to_lake_behind_merman", 1671),
+    "Overworld B2: Chest behind deep water in cave to lake": (
+        2701135990, "overworld_b2_cave_to_lake_behind_merman", 1671
+    ),
     "Tarn's Manor: Falling chest in dining room after slaying Murggs": (2701135991, "tarn_manor", 261),
     "Tarn's Manor: Upstairs right chest": (2701135992, "tarn_manor", 658),
     "Tarn's Manor: First underground chest": (2701135993, "tarn_manor", 657),
@@ -228,15 +236,23 @@ LOCATIONS = {
     "Ancient Shrine: Right reward chest after beating boss": (2701136023, "ancient_shrine_behind_cape", 1300),
     "Coastal Cave: Chest hidden behind bricks near entrance": (2701136024, "coastal_cave", 662),
     "Coastal Cave: Chest in 'spiral' room": (2701136025, "coastal_cave", 271),
-    "Coastal Cave: Chest reachable by throwing wood log on water near first key chest": (2701136026, "coastal_cave_behind_merman", 303),
-    "Coastal Cave: Chest on floating wooden structure in 3-buttons hub": (2701136027, "coastal_cave_behind_merman", 666),
+    "Coastal Cave: Chest reachable by throwing wood log on water near first key chest": (
+        2701136026, "coastal_cave_behind_merman", 303
+    ),
+    "Coastal Cave: Chest on floating wooden structure in 3-buttons hub": (
+        2701136027, "coastal_cave_behind_merman", 666
+    ),
     "Coastal Cave: Chest hidden below bricks in 3-buttons seal room": (2701136028, "coastal_cave", 306),
     "Coastal Cave: Chest in buttons arena": (2701136029, "coastal_cave", 279),
     "Coastal Cave: Chest in room revealed by hitting lever": (2701136030, "coastal_cave_behind_merman", 307),
     "Coastal Cave: First chest in room with checkpoint": (2701136031, "coastal_cave_behind_merman", 664),
     "Coastal Cave: Second chest in room with checkpoint": (2701136032, "coastal_cave_behind_merman", 309),
-    "Coastal Cave: Chest on small island in room with elevated key chest": (2701136033, "coastal_cave_behind_merman", 1573),
-    "Coastal Cave: Chest reachable by throwing wood log on water near last key chest": (2701136034, "coastal_cave_behind_merman", 663),
+    "Coastal Cave: Chest on small island in room with elevated key chest": (
+        2701136033, "coastal_cave_behind_merman", 1573
+    ),
+    "Coastal Cave: Chest reachable by throwing wood log on water near last key chest": (
+        2701136034, "coastal_cave_behind_merman", 663
+    ),
     "Coastal Cave: Left boss reward chest": (2701136035, "coastal_cave_behind_merman", 278),
     "Tower of the Great Tree (basement): Bottom chest": (2701136036, "great_tree_tower", 1606),
     "Tower of the Great Tree (basement): Top-left chest": (2701136037, "great_tree_tower", 1607),
@@ -265,7 +281,9 @@ LOCATIONS = {
     "Tower of the Great Tree (Branches): Right chest on great tree branches": (2701136060, "great_tree_tower", 1355),
     "Underground Waterway: First chest in entrance room": (2701136061, "underground_waterway", 912),
     "Underground Waterway: Second chest in entrance room": (2701136062, "underground_waterway", 913),
-    "Underground Waterway: Chest on pillar accessible by falling from engine room": (2701136063, "underground_waterway", 918),
+    "Underground Waterway: Chest on pillar accessible by falling from engine room": (
+        2701136063, "underground_waterway", 918
+    ),
     "Underground Waterway: Chest in room behind waterfall": (2701136064, "underground_waterway", 923),
     "Underground Waterway: Chest in last room top-right corner": (2701136065, "underground_waterway", 924),
     "Lars Crypt: Left chest after bridge": (2701136066, "lars_crypt", 630),
@@ -282,22 +300,42 @@ LOCATIONS = {
     "Magyscar: Top-right chest in watery triple chest room": (2701136077, "magyscar", 836),
     "Magyscar: Bottom-right chest in watery triple chest room": (2701136078, "magyscar", 1578),
     "Magyscar: Chest behind vines in switchable platforms room": (2701136079, "magyscar_behind_bomb_or_fire_wand", 835),
-    "Magyscar: Chest in room with pillars and smashing spikeballs": (2701136080, "magyscar_behind_bomb_or_fire_wand", 834),
-    "Magyscar: Elevated chest in small room with spinning spikeballs": (2701136081, "magyscar_behind_bomb_or_fire_wand", 884),
+    "Magyscar: Chest in room with pillars and smashing spikeballs": (
+        2701136080, "magyscar_behind_bomb_or_fire_wand", 834
+    ),
+    "Magyscar: Elevated chest in small room with spinning spikeballs": (
+        2701136081, "magyscar_behind_bomb_or_fire_wand", 884
+    ),
     "Magyscar: Chest between teleporters": (2701136082, "magyscar_behind_bomb_or_fire_wand", 1579),
-    "Magyscar: Upper chest in room with elevator controlled by switch": (2701136083, "magyscar_behind_bomb_or_fire_wand", 1592),
-    "Magyscar: Lower hidden chest in room with elevator controlled by switch": (2701136084, "magyscar_behind_bomb_or_fire_wand", 843),
-    "Magyscar: Chest behind vines in room with switch giving torch and lowering platforms": (2701136085, "magyscar_behind_bomb_or_fire_wand", 1577),
-    "Magyscar: First chest in vines hallway after room with 4 magic switches": (2701136086, "magyscar_behind_bomb", 857),
-    "Magyscar: Second chest in vines hallway after room with 4 magic switches": (2701136087, "magyscar_behind_bomb", 858),
-    "Magyscar: Third chest in vines hallway after room with 4 magic switches": (2701136088, "magyscar_behind_bomb", 859),
+    "Magyscar: Upper chest in room with elevator controlled by switch": (
+        2701136083, "magyscar_behind_bomb_or_fire_wand", 1592
+    ),
+    "Magyscar: Lower hidden chest in room with elevator controlled by switch": (
+        2701136084, "magyscar_behind_bomb_or_fire_wand", 843
+    ),
+    "Magyscar: Chest behind vines in room with switch giving torch and lowering platforms": (
+        2701136085, "magyscar_behind_bomb_or_fire_wand", 1577
+    ),
+    "Magyscar: First chest in vines hallway after room with 4 magic switches": (
+        2701136086, "magyscar_behind_bomb", 857
+    ),
+    "Magyscar: Second chest in vines hallway after room with 4 magic switches": (
+        2701136087, "magyscar_behind_bomb", 858
+    ),
+    "Magyscar: Third chest in vines hallway after room with 4 magic switches": (
+        2701136088, "magyscar_behind_bomb", 859
+    ),
     "Magyscar: Right boss reward chest": (2701136089, "magyscar_behind_bomb", 882),
     "Reptile Lair: Chest in side cavern accessible from overworld": (2701136090, "reptile_lair_side_cavern", 778),
     "Reptile Lair: Lower chest in main flooded room": (2701136091, "reptile_lair", 741),
     "Reptile Lair: Left elevated chest in main flooded room": (2701136092, "reptile_lair", 742),
-    "Reptile Lair: Chest on wooden structure to the right of main flooded room": (2701136093, "reptile_lair_behind_flail", 743),
+    "Reptile Lair: Chest on wooden structure to the right of main flooded room": (
+        2701136093, "reptile_lair_behind_flail", 743
+    ),
     "Reptile Lair: Chest in room with 3 respawning lizard statues": (2701136094, "reptile_lair_behind_flail", 747),
-    "Reptile Lair: Chest next to stairs after leaving main flooded room using right stairs": (2701136095, "reptile_lair_behind_flail", 754),
+    "Reptile Lair: Chest next to stairs after leaving main flooded room using right stairs": (
+        2701136095, "reptile_lair_behind_flail", 754
+    ),
     "Reptile Lair: Chest next to stairs after moving fireballs room": (2701136096, "reptile_lair_behind_flail", 763),
     "Reptile Lair: Chest in room with two wooden bridges": (2701136097, "reptile_lair_behind_flail", 1308),
     "Reptile Lair: Chest in room with vibrating spikeballs": (2701136098, "reptile_lair_behind_flail", 1357),
@@ -305,12 +343,16 @@ LOCATIONS = {
     "Reptile Lair: Right chest in boss reward room": (2701136100, "reptile_lair_behind_flail", 773),
     "Torla Mountain: Chest bathing in lava": (2701136101, "torla_mountain", 1463),
     "Torla Mountain: Chest in stompable flamethrowers hallway": (2701136102, "torla_mountain", 1464),
-    "Torla Mountain: Chest in top-right corner of room with phoenixes and flamethrowers": (2701136103, "torla_mountain", 1529),
+    "Torla Mountain: Chest in top-right corner of room with phoenixes and flamethrowers": (
+        2701136103, "torla_mountain", 1529
+    ),
     "Torla Mountain: Right chest in checkpoint teleporter room": (2701136104, "torla_mountain", 1481),
     "Torla Mountain: Chest in pit below wooden bridge": (2701136105, "torla_mountain_behind_spring", 1500),
     "Torla Mountain: Chest before boss": (2701136106, "torla_mountain_behind_charm_boots", 1770),
     "Torla Mountain: Boss reward chest": (2701136107, "torla_mountain_behind_charm_boots", 1698),
-    "Nirude's Lair: Chest hidden in passageway behind statue, accessible from outside": (2701136108, "nirude_lair", 1358),
+    "Nirude's Lair: Chest hidden in passageway behind statue, accessible from outside": (
+        2701136108, "nirude_lair", 1358
+    ),
     "Nirude's Lair: Chest on left side of cavern hallway with statues": (2701136109, "nirude_lair", 1244),
     "Nirude's Lair: Right elevated chest in entrance room": (2701136110, "nirude_lair", 1241),
     "Overworld E1: Left chest in two chests group": (2701136111, "nirude_lair", 1727),
@@ -324,24 +366,42 @@ LOCATIONS = {
     "Nava's Keep: Chest in room with hidden paths": (2701136121, "nava_keep", 974),
     "Nava's Keep: Elevated chest on Nava's island": (2701136122, "nava_keep", 1306),
     "Nava's Keep: Chest left to the house on Nava's island": (2701136123, "nava_keep", 1771),
-    "Lake Shrine Exterior (ramparts): Chest in red forcefield generator room": (2701136145, "lake_shrine_exterior_behind_bow", 1013),
-    "Lake Shrine Exterior (ramparts): Chest in blue forcefield generator room": (2701136146, "lake_shrine_exterior_behind_bow", 1014),
-    "Lake Shrine Exterior (ramparts): Left chest behind blue forcefield in left stairway room": (2701136147, "lake_shrine_exterior_behind_bow", 989),
+    "Lake Shrine Exterior (ramparts): Chest in red forcefield generator room": (
+        2701136145, "lake_shrine_exterior_behind_bow", 1013
+    ),
+    "Lake Shrine Exterior (ramparts): Chest in blue forcefield generator room": (
+        2701136146, "lake_shrine_exterior_behind_bow", 1014
+    ),
+    "Lake Shrine Exterior (ramparts): Left chest behind blue forcefield in left stairway room": (
+        2701136147, "lake_shrine_exterior_behind_bow", 989
+    ),
     "Lake Shrine Exterior (ramparts): Hidden chest in left aisle": (2701136148, "lake_shrine_exterior_behind_bow", 980),
-    "Lake Shrine Exterior (garden): Chest to the left of Lake Shrine Interior gate": (2701136149, "lake_shrine_exterior_behind_bow", 1772),
-    "Lake Shrine Exterior (garden): Chest to the right of Lake Shrine Interior gate": (2701136150, "lake_shrine_exterior_behind_bow", 1773),
-    "Lake Shrine Interior (0F): Chest in left aisle kitchen opened after solving the dining room riddle": (2701136151, "lake_shrine_interior", 1029),
+    "Lake Shrine Exterior (garden): Chest to the left of Lake Shrine Interior gate": (
+        2701136149, "lake_shrine_exterior_behind_bow", 1772
+    ),
+    "Lake Shrine Exterior (garden): Chest to the right of Lake Shrine Interior gate": (
+        2701136150, "lake_shrine_exterior_behind_bow", 1773
+    ),
+    "Lake Shrine Interior (0F): Chest in left aisle kitchen opened after solving the dining room riddle": (
+        2701136151, "lake_shrine_interior", 1029
+    ),
     "Lake Shrine Interior (0F): Elevated chest in left aisle armors room": (2701136152, "lake_shrine_interior", 1034),
     "Lake Shrine Interior (0F): Chest in right aisle library": (2701136153, "lake_shrine_interior", 1041),
     "Lake Shrine Interior (0F): Chest hidden inside armor in right aisle": (2701136154, "lake_shrine_interior", 1038),
-    "Lake Shrine Interior (0F): Chest obtained falling from above in right aisle": (2701136155, "lake_shrine_interior_behind_spring", 1035),
+    "Lake Shrine Interior (0F): Chest obtained falling from above in right aisle": (
+        2701136155, "lake_shrine_interior_behind_spring", 1035
+    ),
     "Lake Shrine Interior (left tower): Chest in left tower stairway": (2701136156, "lake_shrine_interior", 1032),
     "Lake Shrine Interior (1F): Chest inside bedroom with flamethrowers": (2701136157, "lake_shrine_interior", 1180),
     "Lake Shrine Interior (1F): Chest inside bedroom with 6 switches": (2701136158, "lake_shrine_interior", 1149),
     "Lake Shrine Interior (1F): Chest inside archery trial with 9 orbs": (2701136159, "lake_shrine_interior", 1134),
-    "Lake Shrine Interior (1F): Chest hidden below bricks in room with hole": (2701136160, "lake_shrine_interior_behind_spring", 1122),
+    "Lake Shrine Interior (1F): Chest hidden below bricks in room with hole": (
+        2701136160, "lake_shrine_interior_behind_spring", 1122
+    ),
     "Lake Shrine Interior (balcony): Chest on left aisle balconies": (2701136161, "lake_shrine_interior", 1131),
-    "Lake Shrine Interior (balcony): Chest on right aisle balconies": (2701136162, "lake_shrine_interior_behind_spring", 1132),
+    "Lake Shrine Interior (balcony): Chest on right aisle balconies": (
+        2701136162, "lake_shrine_interior_behind_spring", 1132
+    ),
 }
 
 # Item sources the client cannot track (shops, trades, scripted rewards): they keep their vanilla item
@@ -351,7 +411,9 @@ LOCKED_LOCATIONS = {
     "Inoa: Second item in Jess's blue chest": ("inoa_jess_chest", "Broken Armor"),
     "Overworld C4: Left coast chest": ("overworld_c4_behind_long_boots", "Magic Elixyr"),
     "Overworld C4: Chest inside forest near the right border": ("overworld_c4", "Strength Elixyr"),
-    "Overworld B3: King Snow reward for dying a specified amount of times": ("overworld_b3_behind_power_glove", "Legend Sword"),
+    "Overworld B3: King Snow reward for dying a specified amount of times": (
+        "overworld_b3_behind_power_glove", "Legend Sword"
+    ),
     "Riverside Casino: 'Wheel of Fortune' second reward": ("riverside_casino", "Gilded Falcon"),
     "Riverside Casino: 'Hit Your Mark' second reward": ("riverside_casino_shooting_range", "Gilded Falcon"),
     "Riverside Casino: 'Slime Smash' second reward": ("riverside_casino", "Gilded Falcon"),
@@ -382,7 +444,141 @@ LOCKED_LOCATIONS = {
     "Naomi's Shop: Item #4": ("naomi_shop", "Life Vessel"),
 }
 
-REGIONS = ["inoa","inoa_jess_chest","naomi_shop","overworld_c1","overworld_c1_right_sector","overworld_c1_elevated_cavern","overworld_c1_cliff","overworld_c2","overworld_c2_cave_behind_spring","overworld_c2_graveyard_house","overworld_d2","overworld_d2_behind_spring","overworld_d2_chest_cliff","overworld_d2_arches","overworld_d2_watermill","overworld_d2_cave","overworld_d2_cave_behind_merman","overworld_d3","overworld_d3_behind_vines","overworld_d3_behind_bricks","overworld_d3_behind_spring","overworld_d3_behind_spring_and_vines","overworld_d4","overworld_d4_behind_long_boots","overworld_c4","overworld_c4_behind_spring","overworld_c4_behind_long_boots","overworld_c4_right_cliff_behind_long_boots","overworld_d1","overworld_d1_cliff_maze","ice_manor","overworld_b4","overworld_b4_behind_merman","overworld_b4_behind_bomb","overworld_b4_behind_power_glove","overworld_b4_nava_hut_behind_spring","nava_keep","overworld_b3","overworld_b3_elevated","overworld_b3_behind_vines","overworld_b3_behind_power_glove","overworld_b3_top_left","overworld_b3_megalith","riverside_casino","riverside_casino_shooting_range","overworld_b2","overworld_b2_left","overworld_b2_cave_to_lake","overworld_b2_cave_to_lake_behind_merman","overworld_b2_upper_mines","overworld_b1","overworld_b1_left","overworld_b1_island","overworld_a4_right","overworld_a4_middle","overworld_a4_left","overworld_a4_manor_caves","overworld_a4_manor_caves_behind_flail","overworld_a4_behind_manor","fire_manor","overworld_a3_left","overworld_a3_left_behind_merman","overworld_a3_left_behind_power_glove","overworld_a3_mimics_cave","overworld_a3_megalith","overworld_a3_right","overworld_a3_right_behind_vines","overworld_a1","overworld_e1","overworld_e1_behind_spring","overworld_e1_left","overworld_e1_top_left","nirude_lair","overworld_a2","overworld_a2_behind_vines","overworld_a2_behind_vines_and_bomb","overworld_e2","overworld_e2_behind_long_boots","overworld_e2_cave_behind_ice_wand","overworld_e3","overworld_e3_bottom_left","overworld_e3_bottom_left_island","overworld_e3_cape_cave","overworld_e3_behind_cape_or_boots","overworld_e4","overworld_e4_behind_merman","overworld_e4_well","overworld_e4_well_behind_vines","lurvy_shop_repeatable","lurvy_shop_unique","lurvy_shop_repair","tarn_manor","coal_mine","fairy_pond","ancient_shrine","ancient_shrine_behind_cape","coastal_cave","coastal_cave_behind_merman","great_tree_tower","underground_waterway","lars_crypt","magyscar","magyscar_behind_bomb_or_fire_wand","magyscar_behind_bomb","reptile_lair_side_cavern","reptile_lair","reptile_lair_behind_flail","torla_mountain","torla_mountain_behind_charm_boots","torla_mountain_behind_spring","merrick_shop_1","merrick_shop_2","merrick_shop_3","merrick_shop_4","merrick_shop_5","merrick_shop_6","merrick_shop_7","merrick_shop_8","river_network","crest_ruby","crest_sapphire","crest_topaz","crest_agate","crest_emerald","crest_garnet","crest_diamond","lake_shrine_exterior","lake_shrine_exterior_behind_bow","lake_shrine_interior","lake_shrine_interior_behind_flail","lake_shrine_interior_behind_spring","melzas_fight","end"]
+REGIONS = [
+    "inoa",
+    "inoa_jess_chest",
+    "naomi_shop",
+    "overworld_c1",
+    "overworld_c1_right_sector",
+    "overworld_c1_elevated_cavern",
+    "overworld_c1_cliff",
+    "overworld_c2",
+    "overworld_c2_cave_behind_spring",
+    "overworld_c2_graveyard_house",
+    "overworld_d2",
+    "overworld_d2_behind_spring",
+    "overworld_d2_chest_cliff",
+    "overworld_d2_arches",
+    "overworld_d2_watermill",
+    "overworld_d2_cave",
+    "overworld_d2_cave_behind_merman",
+    "overworld_d3",
+    "overworld_d3_behind_vines",
+    "overworld_d3_behind_bricks",
+    "overworld_d3_behind_spring",
+    "overworld_d3_behind_spring_and_vines",
+    "overworld_d4",
+    "overworld_d4_behind_long_boots",
+    "overworld_c4",
+    "overworld_c4_behind_spring",
+    "overworld_c4_behind_long_boots",
+    "overworld_c4_right_cliff_behind_long_boots",
+    "overworld_d1",
+    "overworld_d1_cliff_maze",
+    "ice_manor",
+    "overworld_b4",
+    "overworld_b4_behind_merman",
+    "overworld_b4_behind_bomb",
+    "overworld_b4_behind_power_glove",
+    "overworld_b4_nava_hut_behind_spring",
+    "nava_keep",
+    "overworld_b3",
+    "overworld_b3_elevated",
+    "overworld_b3_behind_vines",
+    "overworld_b3_behind_power_glove",
+    "overworld_b3_top_left",
+    "overworld_b3_megalith",
+    "riverside_casino",
+    "riverside_casino_shooting_range",
+    "overworld_b2",
+    "overworld_b2_left",
+    "overworld_b2_cave_to_lake",
+    "overworld_b2_cave_to_lake_behind_merman",
+    "overworld_b2_upper_mines",
+    "overworld_b1",
+    "overworld_b1_left",
+    "overworld_b1_island",
+    "overworld_a4_right",
+    "overworld_a4_middle",
+    "overworld_a4_left",
+    "overworld_a4_manor_caves",
+    "overworld_a4_manor_caves_behind_flail",
+    "overworld_a4_behind_manor",
+    "fire_manor",
+    "overworld_a3_left",
+    "overworld_a3_left_behind_merman",
+    "overworld_a3_left_behind_power_glove",
+    "overworld_a3_mimics_cave",
+    "overworld_a3_megalith",
+    "overworld_a3_right",
+    "overworld_a3_right_behind_vines",
+    "overworld_a1",
+    "overworld_e1",
+    "overworld_e1_behind_spring",
+    "overworld_e1_left",
+    "overworld_e1_top_left",
+    "nirude_lair",
+    "overworld_a2",
+    "overworld_a2_behind_vines",
+    "overworld_a2_behind_vines_and_bomb",
+    "overworld_e2",
+    "overworld_e2_behind_long_boots",
+    "overworld_e2_cave_behind_ice_wand",
+    "overworld_e3",
+    "overworld_e3_bottom_left",
+    "overworld_e3_bottom_left_island",
+    "overworld_e3_cape_cave",
+    "overworld_e3_behind_cape_or_boots",
+    "overworld_e4",
+    "overworld_e4_behind_merman",
+    "overworld_e4_well",
+    "overworld_e4_well_behind_vines",
+    "lurvy_shop_repeatable",
+    "lurvy_shop_unique",
+    "lurvy_shop_repair",
+    "tarn_manor",
+    "coal_mine",
+    "fairy_pond",
+    "ancient_shrine",
+    "ancient_shrine_behind_cape",
+    "coastal_cave",
+    "coastal_cave_behind_merman",
+    "great_tree_tower",
+    "underground_waterway",
+    "lars_crypt",
+    "magyscar",
+    "magyscar_behind_bomb_or_fire_wand",
+    "magyscar_behind_bomb",
+    "reptile_lair_side_cavern",
+    "reptile_lair",
+    "reptile_lair_behind_flail",
+    "torla_mountain",
+    "torla_mountain_behind_charm_boots",
+    "torla_mountain_behind_spring",
+    "merrick_shop_1",
+    "merrick_shop_2",
+    "merrick_shop_3",
+    "merrick_shop_4",
+    "merrick_shop_5",
+    "merrick_shop_6",
+    "merrick_shop_7",
+    "merrick_shop_8",
+    "river_network",
+    "crest_ruby",
+    "crest_sapphire",
+    "crest_topaz",
+    "crest_agate",
+    "crest_emerald",
+    "crest_garnet",
+    "crest_diamond",
+    "lake_shrine_exterior",
+    "lake_shrine_exterior_behind_bow",
+    "lake_shrine_interior",
+    "lake_shrine_interior_behind_flail",
+    "lake_shrine_interior_behind_spring",
+    "melzas_fight",
+    "end",
+]
 
 # (from, to, two_way, {item: count}, [required regions])
 PATHS = [
@@ -564,7 +760,21 @@ PATHS = [
     ("overworld_b1_left", "crest_emerald", True, {"Emerald Crest":1}, []),
     ("overworld_b1", "crest_agate", True, {"Agate Crest":1}, []),
     ("overworld_b1_island", "crest_garnet", True, {"Garnet Crest":1}, []),
-    ("overworld_b1", "lake_shrine_exterior", True, {}, ["crest_ruby","crest_sapphire","crest_topaz","crest_agate","crest_emerald","crest_garnet","crest_diamond"]),
+    (
+        "overworld_b1",
+        "lake_shrine_exterior",
+        True,
+        {},
+        [
+            "crest_ruby",
+            "crest_sapphire",
+            "crest_topaz",
+            "crest_agate",
+            "crest_emerald",
+            "crest_garnet",
+            "crest_diamond",
+        ],
+    ),
     ("lake_shrine_exterior", "lake_shrine_exterior_behind_bow", True, {"Hunter's Bow":1,"Merman Boots":1}, []),
     ("lake_shrine_exterior_behind_bow", "lake_shrine_interior", True, {}, []),
     ("lake_shrine_interior", "lake_shrine_interior_behind_flail", True, {"Iron Flail":1}, []),
@@ -581,5 +791,58 @@ STARTING_INVENTORY = ["Dagger","Cloth Armor","Short Boots"]
 CRESTS = ["Ruby Crest","Sapphire Crest","Topaz Crest","Agate Crest","Emerald Crest","Garnet Crest","Diamond Crest"]
 
 # Default pool of the randomizer, without crests (they are added from the crest_count option)
-ITEM_POOL = {"Herbs":60,"Strength Tonic":14,"Strength Elixyr":9,"Magic Elixyr":9,"Wonder Essence":7,"1 Gilder":2,"5 Gilder":8,"10 Gilder":17,"30 Gilder":24,"Life Vessel":40,"Magic Seed":4,"Gilded Falcon":50,"Sword":1,"Fiend Blade":1,"Holy Sword":1,"Legend Sword":1,"Iron Flail":1,"Steel Flail":1,"Hunter's Bow":1,"Willow Bow":1,"Olga's Ring":1,"Silver Armlet":1,"Recovery Ring":1,"Nava's Charm":1,"Spirit Wand":1,"Long Boots":1,"Merman Boots":1,"Charm Boots":1,"Leather Armor":1,"Ancient Armor":1,"Silver Armor":1,"Fire Wand":1,"Ice Wand":1,"Bomb":1,"Spring Bean":1,"Sand Cape":1,"Aqua Cape":1,"Power Glove":1,"Secret Pass":1,"Tree Gem":1,"Bouquet":1,"Broken Armor":1,"Small Key":1,"Sluice Key":1,"Earth Scroll":1,"Earth Book":1,"Water Scroll":1,"Water Book":1,"Fire Scroll":1,"Fire Book":1,"Wind Scroll":1,"Wind Book":1}
+ITEM_POOL = {
+    "Herbs": 60,
+    "Strength Tonic": 14,
+    "Strength Elixyr": 9,
+    "Magic Elixyr": 9,
+    "Wonder Essence": 7,
+    "1 Gilder": 2,
+    "5 Gilder": 8,
+    "10 Gilder": 17,
+    "30 Gilder": 24,
+    "Life Vessel": 40,
+    "Magic Seed": 4,
+    "Gilded Falcon": 50,
+    "Sword": 1,
+    "Fiend Blade": 1,
+    "Holy Sword": 1,
+    "Legend Sword": 1,
+    "Iron Flail": 1,
+    "Steel Flail": 1,
+    "Hunter's Bow": 1,
+    "Willow Bow": 1,
+    "Olga's Ring": 1,
+    "Silver Armlet": 1,
+    "Recovery Ring": 1,
+    "Nava's Charm": 1,
+    "Spirit Wand": 1,
+    "Long Boots": 1,
+    "Merman Boots": 1,
+    "Charm Boots": 1,
+    "Leather Armor": 1,
+    "Ancient Armor": 1,
+    "Silver Armor": 1,
+    "Fire Wand": 1,
+    "Ice Wand": 1,
+    "Bomb": 1,
+    "Spring Bean": 1,
+    "Sand Cape": 1,
+    "Aqua Cape": 1,
+    "Power Glove": 1,
+    "Secret Pass": 1,
+    "Tree Gem": 1,
+    "Bouquet": 1,
+    "Broken Armor": 1,
+    "Small Key": 1,
+    "Sluice Key": 1,
+    "Earth Scroll": 1,
+    "Earth Book": 1,
+    "Water Scroll": 1,
+    "Water Book": 1,
+    "Fire Scroll": 1,
+    "Fire Book": 1,
+    "Wind Scroll": 1,
+    "Wind Book": 1,
+}
 

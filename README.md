@@ -63,6 +63,7 @@ Currently, the following games are supported:
 * Mario & Luigi: Superstar Saga
 * Bomb Rush Cyberfunk
 * Aquaria
+* Alundra
 * Yu-Gi-Oh! Ultimate Masters: World Championship Tournament 2006
 * A Hat in Time
 * Old School Runescape

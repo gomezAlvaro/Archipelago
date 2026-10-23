@@ -18,7 +18,7 @@ whose text is baked into a table of (story flag of the chest, text).
 """
 import struct
 
-from .mips import A0, A1, RA, S1, SP, T0, T1, T2, T9, ZERO, MipsCode
+from .mips import A0, A1, RA, S1, SP, T0, T1, T2, ZERO, MipsCode
 
 MAILBOX_ADDRESS = 0x8001F740
 MAILBOX_SIZE = 0xC0
