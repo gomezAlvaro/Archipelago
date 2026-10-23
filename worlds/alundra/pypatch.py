@@ -4,7 +4,8 @@ Builds the patched game in pure Python, without the Java randomizer.
 The game files edited by the randomizer are mostly the same for every Archipelago seed: they are stored as binary
 patches against the files of the original disc (see ``patch_data`` and ``scripts/ap/build_patch_data.py`` in the
 randomizer repository). What depends on the seed is applied on top of them: the item of every location, and the names
-of the slot and of the multiworld, which the client reads from the game.
+of the slot and of the multiworld, which the client reads from the game. The code talking to the client is added to
+the executable by ``exe_hooks``.
 """
 import json
 import pkgutil
@@ -12,22 +13,16 @@ import struct
 import zlib
 from typing import Any
 
-from . import data
+from . import data, exe_hooks
 from .disc import CdImage, DiscError, Iso9660, IsoRebuilder
 
 PATCH_DATA = "patch_data"
 EXPECTED_IMAGE_SIZE = 600359760
 
 # Item the game gives for items that belong to other worlds (the game ignores it)
-ITEM_PLACEHOLDER = 0x1E
-
-MAILBOX_MAGIC = b"ALAP"
-SLOT_NAME_OFFSET, SEED_NAME_OFFSET, MAILBOX_SIZE = 0x60, 0x80, 0xC0
+ITEM_PLACEHOLDER = exe_hooks.ITEM_PLACEHOLDER
 
 RUNS_MAGIC = b"ARUN"
-
-# Table of the texts shown when opening a chest holding an item of another world (the game's size, see PatchArchipelago)
-ITEM_BOX_ENTRY_SIZE, ITEM_BOX_ENTRIES = 80, 320
 
 # Name the game shows for the items of other worlds. It is also what the patch data holds in the text naming the item
 # of a location, which is replaced by the name of the actual item here.
@@ -75,10 +70,6 @@ def apply_runs(original: bytes, patch: bytes) -> bytearray:
     return result
 
 
-def _ascii_field(text: str, size: int) -> bytes:
-    return text.encode("ascii", "replace")[:size - 1].ljust(size, b"\0")
-
-
 def _read_long(datas: bytearray, address: int) -> int:
     return struct.unpack_from("<I", datas, address)[0]
 
@@ -119,25 +110,14 @@ def apply_item_texts(datas: bytearray, names: dict[str, str]) -> None:
         datas[start:start + strings_size] = encoded.ljust(strings_size, b"\0")
 
 
-def apply_item_box_texts(exe: bytearray, manifest: dict[str, Any], patch: dict[str, Any]) -> None:
-    """
-    Fills the table the game reads when a chest holds an item of another world, which gives the text of the box:
-    entries of the story flag of the chest followed by the null-terminated text.
-    """
-    entries = []
+def item_box_texts(patch: dict[str, Any]) -> list[tuple[int, str]]:
+    """(story flag of the chest, text of its box) for the chests holding an item of another world"""
+    texts = []
     for location in patch["locations"]:
-        if location["item"] is not None or "name_of_item" not in location:
-            continue
-        text = f"Sent {location['name_of_item']} to {location.get('recipient', 'another player')}"
-        entries.append((data.LOCATIONS[location["name"]][2], _ascii_field(text, ITEM_BOX_ENTRY_SIZE - 4)))
-    if len(entries) > ITEM_BOX_ENTRIES:
-        raise DiscError("Too many items of other worlds for the game")
-    table = manifest["text_table_offset"]
-    if bytes(exe[table:table + ITEM_BOX_ENTRY_SIZE * ITEM_BOX_ENTRIES]).count(0) != ITEM_BOX_ENTRY_SIZE * ITEM_BOX_ENTRIES:
-        raise DiscError("The patch data of the Alundra world is corrupted (text table not empty)")
-    for index, (flag, text) in enumerate(entries):
-        position = table + index * ITEM_BOX_ENTRY_SIZE
-        exe[position:position + ITEM_BOX_ENTRY_SIZE] = struct.pack("<I", flag) + text
+        if location["item"] is None and "name_of_item" in location:
+            text = f"Sent {location['name_of_item']} to {location.get('recipient', 'another player')}"
+            texts.append((data.LOCATIONS[location["name"]][2], text))
+    return texts
 
 
 def apply_seed(files: dict[str, bytearray], manifest: dict[str, Any], patch: dict[str, Any]) -> None:
@@ -162,15 +142,11 @@ def apply_seed(files: dict[str, bytearray], manifest: dict[str, Any], patch: dic
             datas[address] = (sprite_id + 0x1E) & 0xFF
     apply_item_texts(datas, names)
 
-    exe = files[manifest["exe_file"]]
-    apply_item_box_texts(exe, manifest, patch)
-    mailbox = manifest["mailbox_offset"]
-    if exe[mailbox:mailbox + 4] != MAILBOX_MAGIC:
-        raise DiscError("The patch data of the Alundra world is corrupted (mailbox not found)")
-    exe[mailbox + SLOT_NAME_OFFSET:mailbox + SEED_NAME_OFFSET] = _ascii_field(
-        patch["player_name"], SEED_NAME_OFFSET - SLOT_NAME_OFFSET)
-    exe[mailbox + SEED_NAME_OFFSET:mailbox + MAILBOX_SIZE] = _ascii_field(
-        patch["seed_name"], MAILBOX_SIZE - SEED_NAME_OFFSET)
+    try:
+        files[manifest["exe_file"]] = exe_hooks.install(
+            files[manifest["exe_file"]], patch["player_name"], patch["seed_name"], item_box_texts(patch))
+    except exe_hooks.ExeError as error:
+        raise DiscError(f"The patch data of the Alundra world is corrupted ({error})")
 
 
 def build_game(input_bin: str, patch_json: bytes, output_bin: str) -> str:

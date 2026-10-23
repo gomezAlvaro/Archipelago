@@ -2,7 +2,7 @@ import os
 import struct
 import unittest
 
-from .. import disc, pypatch
+from .. import disc, exe_hooks, pypatch
 
 
 class TestRuns(unittest.TestCase):
@@ -15,8 +15,8 @@ class TestRuns(unittest.TestCase):
             pypatch.apply_runs(b"0123", b"nope")
 
     def test_ascii_field(self) -> None:
-        self.assertEqual(pypatch._ascii_field("Luzbe", 8), b"Luzbe\0\0\0")
-        self.assertEqual(pypatch._ascii_field("A" * 20, 8), b"A" * 7 + b"\0")
+        self.assertEqual(exe_hooks._ascii_field("Luzbe", 8), b"Luzbe\0\0\0")
+        self.assertEqual(exe_hooks._ascii_field("A" * 20, 8), b"A" * 7 + b"\0")
 
 
 class TestSectors(unittest.TestCase):
