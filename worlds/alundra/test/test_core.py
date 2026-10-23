@@ -137,13 +137,11 @@ class TestSync(unittest.TestCase):
         self.memory.game_processes_mailbox()
         self.assertEqual(self.memory.inventory, [SWORD[2]])
 
-    def test_announces_items_sent_to_other_players(self) -> None:
-        location_id, _, flag = FIRST_LOCATION
-        self.sync.scouted[location_id] = ("Master Sword", "Link")
+    def test_opening_a_chest_shows_no_extra_message(self) -> None:
+        _, _, flag = FIRST_LOCATION
         self.memory.set_flag(flag)
         run(self.sync.step(self.memory, [], set()))
-        text = run(self.memory.read(core.MAILBOX + core.MESSAGE_OFFSET, 40)).split(b"\0")[0]
-        self.assertEqual(text, b"Sent Master Sword to Link")
+        self.assertEqual(run(self.memory.read(core.MAILBOX + 12, 4)), b"\0\0\0\0")
 
     def test_the_starting_inventory_is_not_given_twice(self) -> None:
         sync = core.AlundraSync(1, lambda item_id: "Dagger" if item_id == data.ITEMS["Dagger"][0] else "Sword",
