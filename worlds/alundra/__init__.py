@@ -140,8 +140,15 @@ class AlundraWorld(World):
         locations = []
         for name in data.LOCATIONS:
             item = self.get_location(name).item
-            # Items of other worlds are shown as a placeholder in the game
-            locations.append({"name": name, "item": item.name if item.player == self.player else None})
+            if item.player == self.player:
+                locations.append({"name": name, "item": item.name})
+                continue
+            # Items of other worlds are a placeholder which gives nothing, with the real name for the dialogues
+            # naming it, and the sprite of the item when it is one of Alundra
+            location = {"name": name, "item": None, "name_of_item": item.name}
+            if item.game == self.game and item.name in data.ITEMS:
+                location["sprite"] = item.name
+            locations.append(location)
 
         patch_data = {
             "game": self.game,

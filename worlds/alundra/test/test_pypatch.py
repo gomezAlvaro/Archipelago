@@ -49,7 +49,10 @@ class TestBuildGame(unittest.TestCase):
         from .. import data
         names = list(data.LOCATIONS)
         patch = {"seed_name": "seed", "player_name": "Quester",
-                 "locations": [{"name": n, "item": "Herbs" if i % 2 else None} for i, n in enumerate(names)]}
+                 "locations": [{"name": n, "item": "Herbs"} if i % 2 else
+                                 {"name": n, "item": None, "name_of_item": "Hookshot of the Wind Waker, long",
+                                  **({"sprite": "Herbs"} if i % 4 == 0 else {})}
+                                 for i, n in enumerate(names)]}
         with tempfile.TemporaryDirectory() as directory:
             cue = pypatch.build_game(os.environ["ALUNDRA_DISC"], json.dumps(patch).encode(),
                                      os.path.join(directory, "out.bin"))

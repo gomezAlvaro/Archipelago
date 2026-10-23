@@ -123,12 +123,16 @@ def apply_seed(files: dict[str, bytearray], manifest: dict[str, Any], patch: dic
     names = {}
     for location in patch["locations"]:
         source = addresses[location["name"]]
-        names[location["name"]] = PLACEHOLDER_NAME if location["item"] is None else location["item"]
+        # The dialogues have room for the placeholder's length only
+        names[location["name"]] = (location["item"] or location.get("name_of_item") or PLACEHOLDER_NAME) \
+            .encode("ascii", "replace").decode("ascii")[:len(PLACEHOLDER_NAME)]
         item_id = ITEM_PLACEHOLDER if location["item"] is None else data.ITEMS[location["item"]][2]
+        # An item of another player's Alundra world keeps its own sprite
+        sprite_id = data.ITEMS[location["sprite"]][2] if location.get("sprite") else item_id
         for address in source["addresses"]:
             datas[address] = item_id
         for address in source["sprites"]:
-            datas[address] = (item_id + 0x1E) & 0xFF
+            datas[address] = (sprite_id + 0x1E) & 0xFF
     apply_item_texts(datas, names)
 
     exe = files[manifest["exe_file"]]
