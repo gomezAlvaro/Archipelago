@@ -151,8 +151,11 @@ def apply_seed(files: dict[str, bytearray], manifest: dict[str, Any], patch: dic
         names[location["name"]] = (location["item"] or location.get("name_of_item") or PLACEHOLDER_NAME) \
             .encode("ascii", "replace").decode("ascii")[:len(PLACEHOLDER_NAME)]
         item_id = ITEM_PLACEHOLDER if location["item"] is None else data.ITEMS[location["item"]][2]
-        # An item of another player's Alundra world keeps its own sprite
+        # An item of another player's Alundra world keeps its own sprite. A chest has no separate sprite: it holds
+        # the item itself, which the game doesn't give since its chest is in the table of other worlds' items.
         sprite_id = data.ITEMS[location["sprite"]][2] if location.get("sprite") else item_id
+        if location["item"] is None and location.get("sprite") and "name_of_item" in location and not source["sprites"]:
+            item_id = sprite_id
         for address in source["addresses"]:
             datas[address] = item_id
         for address in source["sprites"]:
