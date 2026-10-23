@@ -2,7 +2,7 @@ import asyncio
 import struct
 import unittest
 
-from .. import core, data
+from .. import core, data, exe_hooks
 
 
 class FakeMemory:
@@ -22,19 +22,43 @@ class FakeMemory:
         start = address & 0x1FFFFF
         return bytes(self.ram[start:start + size])
 
-    async def write(self, address: int, data: bytes) -> None:
-        self.write_at(address, data)
+    async def guarded_write(self, writes: list[tuple[int, bytes]], guards: list[tuple[int, bytes]]) -> bool:
+        if any(run_sync(self.read(address, len(expected))) != expected for address, expected in guards):
+            return False
+        for address, value in writes:
+            self.write_at(address, value)
+        return True
 
-    def game_processes_mailbox(self) -> None:
+    def counter(self) -> int:
+        return struct.unpack_from("<H", self.ram, core.COUNTER_ADDRESS & 0x1FFFFF)[0]
+
+    def game_processes_mailbox(self, message_box_open: bool = False) -> None:
         """What the patched game does once per frame"""
         base = core.MAILBOX & 0x1FFFFF
-        item = struct.unpack_from("<I", self.ram, base + 4)[0]
+        item, target = struct.unpack_from("<II", self.ram, base + 4)
         if item:
-            self.inventory.append(item)
             struct.pack_into("<I", self.ram, base + 4, 0)
-        struct.pack_into("<I", self.ram, base + 12, 0)
+            if self.counter() + 1 == target:
+                struct.pack_into("<H", self.ram, core.COUNTER_ADDRESS & 0x1FFFFF, target)
+                if item != exe_hooks.NO_GAME_ITEM:
+                    self.inventory.append(item)
+            else:
+                struct.pack_into("<I", self.ram, base + 12, 0)
+        if not message_box_open and struct.unpack_from("<I", self.ram, base + 12)[0]:
+            struct.pack_into("<I", self.ram, base + 12, 0)
+            self.messages.append(bytes(self.ram[base + 20:base + 96]).split(b"\0")[0].decode())
 
     inventory: list[int]
+    messages: list[str]
+
+
+def run_sync(coroutine):
+    """Runs a coroutine that never waits, from inside a running event loop"""
+    try:
+        coroutine.send(None)
+    except StopIteration as stop:
+        return stop.value
+    raise RuntimeError("The coroutine waited")
 
 
 def run(coroutine):
@@ -53,6 +77,7 @@ class TestSync(unittest.TestCase):
     def setUp(self) -> None:
         self.memory = FakeMemory()
         self.memory.inventory = []
+        self.memory.messages = []
         self.memory.set_flag(core.HUD_FLAG)
         self.memory.write_at(core.INVENTORY_BASE + 4 + 2, b"\1\0")  # a started game holds its starting items
         self.sync = make_sync()
@@ -115,14 +140,69 @@ class TestSync(unittest.TestCase):
     def test_the_item_count_is_stored_in_the_game(self) -> None:
         received = [core.ReceivedItem(SWORD[0], 12345, 2)]
         run(self.sync.step(self.memory, received, set()))
-        counter = struct.unpack("<H", run(self.memory.read(core.COUNTER_ADDRESS, 2)))[0]
-        self.assertEqual(counter, 1)
-        # A client that restarts doesn't give the items again
+        # The game counts the item when it gives it, not the client when it asks for it
+        self.assertEqual(self.memory.counter(), 0)
         self.memory.game_processes_mailbox()
+        self.assertEqual(self.memory.counter(), 1)
+        # A client that restarts doesn't give the items again
         restarted = make_sync()
         run(restarted.step(self.memory, received, set()))
         self.memory.game_processes_mailbox()
         self.assertEqual(self.memory.inventory, [SWORD[2]])
+
+    def test_a_request_for_another_save_is_dropped(self) -> None:
+        received = [core.ReceivedItem(SWORD[0], 12345, 2)]
+        run(self.sync.step(self.memory, received, set()))
+        # An older save that already received the item is loaded before the game takes the request
+        self.memory.write_at(core.COUNTER_ADDRESS, b"\1\0")
+        self.memory.game_processes_mailbox()
+        self.assertEqual(self.memory.inventory, [])
+        self.assertEqual(self.memory.messages, [])
+        self.assertEqual(self.memory.counter(), 1)
+
+    def test_nothing_is_written_if_a_save_is_loaded_meanwhile(self) -> None:
+        received = [core.ReceivedItem(SWORD[0], 12345, 2)]
+        memory = self.memory
+
+        class LoadsASave(FakeMemory):
+            async def read(self, address: int, size: int) -> bytes:
+                data = await memory.read(address, size)
+                if address == core.COUNTER_ADDRESS:
+                    memory.write_at(core.COUNTER_ADDRESS, b"\5\0")
+                return data
+
+        loading = LoadsASave()
+        loading.ram = memory.ram
+        run(self.sync.step(loading, received, set()))
+        self.assertEqual(run(memory.read(core.MAILBOX + 4, 12)), bytes(12))
+        self.assertEqual(memory.counter(), 5)
+
+    def test_waits_for_the_open_message_box(self) -> None:
+        received = [core.ReceivedItem(SWORD[0], 12345, 2), core.ReceivedItem(SWORD[0], 12346, 2)]
+        run(self.sync.step(self.memory, received, set()))
+        self.memory.game_processes_mailbox(message_box_open=True)
+        self.assertEqual(self.memory.inventory, [SWORD[2]])
+        self.assertEqual(self.memory.messages, [])
+        # The next item waits for the message
+        self.sync.last_message_time = 0
+        run(self.sync.step(self.memory, received, set()))
+        self.assertEqual(run(self.memory.read(core.MAILBOX + 4, 4)), bytes(4))
+        self.memory.game_processes_mailbox()
+        self.assertEqual(self.memory.messages, [f"Received item {SWORD[0]} from player 2"])
+
+    def test_items_without_a_game_item_are_still_counted(self) -> None:
+        received = [core.ReceivedItem(123, 12345, 2)]
+        run(self.sync.step(self.memory, received, set()))
+        self.memory.game_processes_mailbox()
+        self.assertEqual(self.memory.inventory, [])
+        self.assertEqual(self.memory.counter(), 1)
+        self.assertEqual(len(self.memory.messages), 1)
+
+    def test_back_to_the_title_screen_the_next_game_must_be_stable_again(self) -> None:
+        self.memory.ram[(core.FLAGS_BASE & 0x1FFFFF) + (core.HUD_FLAG >> 3)] = 0
+        run(self.sync.step(self.memory, [], set()))
+        self.memory.set_flag(core.HUD_FLAG)
+        self.assertEqual(run(self.sync.step(self.memory, [], set())).status, "Waiting for a game to start")
 
     def test_does_not_give_items_a_chest_already_gave(self) -> None:
         location_id, _, _ = FIRST_LOCATION

@@ -4,30 +4,41 @@ the game. This is a port of the Java randomizer's Archipelago patch, which no lo
 
 Mailbox layout (little-endian words, at MAILBOX_ADDRESS):
     +0   magic "ALAP"
-    +4   item ID the client wants the game to give (0 when the mailbox is free)
-    +8   count of items the game gave from the mailbox so far (incremented by the game)
-    +12  1 when the text at +20 must be shown in a message box (the game clears it once shown)
+    +4   item ID the client wants the game to give (0 when the mailbox is free, NO_GAME_ITEM to give nothing)
+    +8   value of the saved item counter once the item is given: the game gives the item and stores this value only
+         when its counter is one less, so a request made for another save (one loaded meanwhile) is dropped
+    +12  1 when the text at +20 must be shown in a message box (the game clears it once shown, and waits while
+         another box is open)
     +16  set to 1 by the game when the ending starts
     +20  null-terminated message text, up to 75 characters
     +96  name of the Archipelago slot (null-terminated, up to 31 characters), used by the client to log in
-    +128 name of the multiworld seed (null-terminated, up to 63 characters)
+    +128 name of the multiworld seed (null-terminated, up to 59 characters)
+    +188 PROTOCOL_VERSION (0 in games built before it existed)
 
-Once per frame, the game checks the mailbox, gives the requested item through its own item pickup routine, shows the
-message if there is one and frees the mailbox. A chest holding an item of another world gives nothing and opens a box
-whose text is baked into a table of (story flag of the chest, text).
+Once per frame, the game checks the mailbox, gives the requested item through its own item pickup routine and counts
+it in the save, shows the message if there is one and frees the mailbox. A chest holding an item of another world
+gives nothing and opens a box whose text is baked into a table of (story flag of the chest, text).
 """
 import struct
 
-from .mips import A0, A1, RA, S1, SP, T0, T1, T2, ZERO, MipsCode
+from .mips import A0, A1, RA, S1, SP, T0, T1, T2, V0, ZERO, MipsCode
 
 MAILBOX_ADDRESS = 0x8001F740
 MAILBOX_SIZE = 0xC0
 MAILBOX_MAGIC = b"ALAP"
-SLOT_NAME_OFFSET, SEED_NAME_OFFSET = 0x60, 0x80
+SLOT_NAME_OFFSET, SEED_NAME_OFFSET, VERSION_OFFSET = 0x60, 0x80, 0xBC
+# Version of the way the game and the client talk through the mailbox: a client refuses a game of another version
+PROTOCOL_VERSION = 2
 MESSAGE_OFFSET = 20
 
 # Unused item ID used for items belonging to other worlds
 ITEM_PLACEHOLDER = 0x1E
+# Asks the game to count a received item without giving anything
+NO_GAME_ITEM = 0xFFFFFFFF
+# Items a full stack can't take: a chest holding one doesn't open, so it can't stand for another world's item
+CAPPED_ITEMS = frozenset({0x24, 0x25, 0x26, 0x27, 0x29})
+# Quantity (halfword) of an unused inventory item, saved with the game: the number of items received so far
+ITEM_COUNTER_ADDRESS = 0x801DD82E + 0x3A * 4 + 2
 
 # The function called once per frame while the game is running: its call to a subroutine is hooked
 FRAME_HOOK_CALL = 0x8002BFB4
@@ -38,6 +49,8 @@ FUN_OBTAIN_ITEM = 0x800344D4
 GIVE_ITEM_CALL = 0x8007EB4C
 ITEM_MESSAGE_CALL = 0x8007EB14
 FUN_SHOW_MESSAGE = 0x8004608C
+# Returns non-zero while a message box is open (the game checks it before opening its own)
+FUN_MESSAGE_BUSY = 0x80045F8C
 FUN_PLAY_SOUND = 0x8004A128
 ITEM_JINGLE_SOUND = 0x34
 # Start of the branch of the game starting its ending: its first call is hooked to flag the goal as reached
@@ -105,8 +118,9 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
         raise ExeError("The executable has no Archipelago mailbox")
     exe[mailbox_offset + SLOT_NAME_OFFSET:mailbox_offset + SEED_NAME_OFFSET] = _ascii_field(
         slot_name, SEED_NAME_OFFSET - SLOT_NAME_OFFSET)
-    exe[mailbox_offset + SEED_NAME_OFFSET:mailbox_offset + MAILBOX_SIZE] = _ascii_field(
-        seed_name, MAILBOX_SIZE - SEED_NAME_OFFSET)
+    exe[mailbox_offset + SEED_NAME_OFFSET:mailbox_offset + VERSION_OFFSET] = _ascii_field(
+        seed_name, VERSION_OFFSET - SEED_NAME_OFFSET)
+    struct.pack_into("<I", exe, mailbox_offset + VERSION_OFFSET, PROTOCOL_VERSION)
 
     # Blocks are injected in front of the code, each one below the previous ones
     blocks: list[bytes] = []
@@ -128,22 +142,34 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
     tick.set_(T0, MAILBOX_ADDRESS)
     tick.lw(T1, T0, 4)
     tick.beq(T1, ZERO, "no_item")
+    tick.sw(ZERO, T0, 4)
+
+    # The request is for this save only if its counter is one less than the requested value
+    tick.lw(T2, T0, 8)
+    tick.set_(A0, ITEM_COUNTER_ADDRESS)
+    tick.lhu(A1, A0, 0)
+    tick.addiu(A1, A1, 1)
+    tick.bne(A1, T2, "stale")
+    tick.sh(A1, A0, 0)
 
     # The game obtains the item exactly like when picking it up
+    tick.beq_(T1, NO_GAME_ITEM, "no_item")
     tick.set_(A0, PLAYER_DATA)
     tick.move_(A1, T1)
     tick.jal(FUN_OBTAIN_ITEM)
+    tick.bra("no_item")
 
-    tick.set_(T0, MAILBOX_ADDRESS)
-    tick.sw(ZERO, T0, 4)
-    tick.lw(T1, T0, 8)
-    tick.addiu(T1, T1, 1)
-    tick.sw(T1, T0, 8)
+    # Its message is dropped with it
+    tick.label("stale")
+    tick.sw(ZERO, T0, 12)
 
     tick.label("no_item")
     tick.set_(T0, MAILBOX_ADDRESS)
     tick.lw(T1, T0, 12)
     tick.beq(T1, ZERO, "done")
+    tick.jal(FUN_MESSAGE_BUSY)
+    tick.bne(V0, ZERO, "done")
+    tick.set_(T0, MAILBOX_ADDRESS)
     tick.sw(ZERO, T0, 12)
     tick.addiu(A0, T0, MESSAGE_OFFSET)
     tick.addiu(A1, ZERO, 1)

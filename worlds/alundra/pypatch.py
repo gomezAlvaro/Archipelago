@@ -120,6 +120,19 @@ def item_box_texts(patch: dict[str, Any]) -> list[tuple[int, str]]:
     return texts
 
 
+def location_item_ids(location: dict[str, Any], has_sprite: bool) -> tuple[int, int]:
+    """(item the game stores at a location, item whose sprite it shows when it has a separate sprite)"""
+    item_id = ITEM_PLACEHOLDER if location["item"] is None else data.ITEMS[location["item"]][2]
+    sprite_id = data.ITEMS[location["sprite"]][2] if location.get("sprite") else item_id
+    # An item of another player's Alundra world keeps its own sprite. A chest has no separate sprite: it holds the
+    # item itself, which the game doesn't give since its chest is in the table of other worlds' items. Not a
+    # consumable a full stack can't take: the game would refuse to open the chest, so it would never be checked.
+    if location["item"] is None and location.get("sprite") and "name_of_item" in location and not has_sprite \
+            and sprite_id not in exe_hooks.CAPPED_ITEMS:
+        item_id = sprite_id
+    return item_id, sprite_id
+
+
 def apply_seed(files: dict[str, bytearray], manifest: dict[str, Any], patch: dict[str, Any]) -> None:
     """Writes what depends on the seed inside the files patched with the data of the world"""
     addresses = json.loads(_resource("seed_sources.json"))
@@ -130,12 +143,7 @@ def apply_seed(files: dict[str, bytearray], manifest: dict[str, Any], patch: dic
         # The dialogues have room for the placeholder's length only
         names[location["name"]] = (location["item"] or location.get("name_of_item") or PLACEHOLDER_NAME) \
             .encode("ascii", "replace").decode("ascii")[:len(PLACEHOLDER_NAME)]
-        item_id = ITEM_PLACEHOLDER if location["item"] is None else data.ITEMS[location["item"]][2]
-        # An item of another player's Alundra world keeps its own sprite. A chest has no separate sprite: it holds
-        # the item itself, which the game doesn't give since its chest is in the table of other worlds' items.
-        sprite_id = data.ITEMS[location["sprite"]][2] if location.get("sprite") else item_id
-        if location["item"] is None and location.get("sprite") and "name_of_item" in location and not source["sprites"]:
-            item_id = sprite_id
+        item_id, sprite_id = location_item_ids(location, bool(source["sprites"]))
         for address in source["addresses"]:
             datas[address] = item_id
         for address in source["sprites"]:

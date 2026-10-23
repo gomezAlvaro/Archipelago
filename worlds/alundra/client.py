@@ -24,9 +24,11 @@ class BizHawkMemory:
         from worlds._bizhawk import read
         return (await read(self.ctx.bizhawk_ctx, [(address & 0x1FFFFF, size, PSX_RAM)]))[0]
 
-    async def write(self, address: int, data: bytes) -> None:
-        from worlds._bizhawk import write
-        await write(self.ctx.bizhawk_ctx, [(address & 0x1FFFFF, data, PSX_RAM)])
+    async def guarded_write(self, writes: list[tuple[int, bytes]], guards: list[tuple[int, bytes]]) -> bool:
+        from worlds._bizhawk import guarded_write
+        return await guarded_write(self.ctx.bizhawk_ctx,
+                                   [(address & 0x1FFFFF, data, PSX_RAM) for address, data in writes],
+                                   [(address & 0x1FFFFF, data, PSX_RAM) for address, data in guards])
 
 
 class AlundraClient(BizHawkClient):
@@ -39,6 +41,7 @@ class AlundraClient(BizHawkClient):
         self.sync: core.AlundraSync | None = None
         self.slot_name = ""
         self.seed_name = ""
+        self.version_error_shown = False
 
     async def validate_rom(self, ctx: "BizHawkClientContext") -> bool:
         from worlds._bizhawk import RequestFailedError, read
@@ -48,9 +51,18 @@ class AlundraClient(BizHawkClient):
             return False  # Should be verified again on the next pass
         if mailbox[:4] != core.MAILBOX_MAGIC:
             return False
+        version = int.from_bytes(mailbox[core.VERSION_OFFSET:core.VERSION_OFFSET + 4], "little")
+        if version != core.exe_hooks.PROTOCOL_VERSION:
+            if not self.version_error_shown:
+                # An older game counts received items differently: it would be given the same items again and again
+                logger.error("This Alundra game was patched by another version of the Alundra world (protocol %d, "
+                             "this client needs %d). Patch the game again from its .apalundra file.",
+                             version, core.exe_hooks.PROTOCOL_VERSION)
+                self.version_error_shown = True
+            return False
 
-        self.slot_name = mailbox[0x60:0x80].split(b"\0")[0].decode("ascii", "replace")
-        self.seed_name = mailbox[0x80:0xC0].split(b"\0")[0].decode("ascii", "replace")
+        self.slot_name = mailbox[core.SLOT_NAME_OFFSET:core.SEED_NAME_OFFSET].split(b"\0")[0].decode("ascii", "replace")
+        self.seed_name = mailbox[core.SEED_NAME_OFFSET:core.VERSION_OFFSET].split(b"\0")[0].decode("ascii", "replace")
         ctx.game = self.game
         ctx.items_handling = 0b111
         ctx.want_slot_data = False
@@ -62,14 +74,22 @@ class AlundraClient(BizHawkClient):
 
     def on_package(self, ctx: "BizHawkClientContext", cmd: str, args: dict[str, Any]) -> None:
         if cmd == "Connected":
-            if self.seed_name and ctx.seed_name and self.seed_name != ctx.seed_name:
-                logger.warning("This game was built for another multiworld (%s), not for %s",
-                               self.seed_name, ctx.seed_name)
             self.sync = None
+
+    def _built_for_another_multiworld(self, ctx: "BizHawkClientContext") -> bool:
+        # The game holds as much of the seed name as fits in its mailbox
+        return bool(self.seed_name and ctx.seed_name
+                    and self.seed_name != ctx.seed_name[:core.VERSION_OFFSET - core.SEED_NAME_OFFSET - 1])
 
     async def game_watcher(self, ctx: "BizHawkClientContext") -> None:
         from worlds._bizhawk import RequestFailedError
         if ctx.slot is None:
+            return
+        if self._built_for_another_multiworld(ctx):
+            # Its opened chests would be sent as checks of this multiworld, and its items counted against them
+            logger.error("This game was built for another multiworld (%s), not for the room you joined (%s). "
+                         "Load the game patched for this room, then connect again.", self.seed_name, ctx.seed_name)
+            await ctx.disconnect()
             return
 
         if self.sync is None:

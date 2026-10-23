@@ -27,6 +27,11 @@ class TestMips(unittest.TestCase):
         code.addiu(SP, SP, -0x20).sw(RA, SP, 0x18).lw(T1, T0, 4, False).lui(T0, 0x8002).jr(RA, False)
         self.assertEqual(words(code), [0x27BDFFE0, 0xAFBF0018, 0x8D090004, 0x3C088002, 0x03E00008])
 
+    def test_halfword_encodings(self) -> None:
+        code = MipsCode()
+        code.lhu(A0, T0, 2, False).sh(A0, T0, 2)
+        self.assertEqual(words(code), [0x95040002, 0xA5040002])
+
     def test_load_and_branch_delay_slots(self) -> None:
         code = MipsCode()
         code.lw(T1, T0, 4).beq(T1, ZERO, "end").label("end")
@@ -74,6 +79,14 @@ class TestInstall(unittest.TestCase):
         self.assertEqual(self.result[mailbox:mailbox + 4], exe_hooks.MAILBOX_MAGIC)
         self.assertEqual(self.result[mailbox + 0x60:mailbox + 0x68], b"Quester\0")
         self.assertEqual(self.result[mailbox + 0x80:mailbox + 0x85], b"seed\0")
+        self.assertEqual(struct.unpack_from("<I", self.result, mailbox + exe_hooks.VERSION_OFFSET)[0],
+                         exe_hooks.PROTOCOL_VERSION)
+
+    def test_a_long_seed_name_leaves_the_version(self) -> None:
+        result = exe_hooks.install(self.exe, "a", "9" * 100, [])
+        mailbox = self.offset(exe_hooks.MAILBOX_ADDRESS)
+        self.assertEqual(struct.unpack_from("<I", result, mailbox + exe_hooks.VERSION_OFFSET)[0],
+                         exe_hooks.PROTOCOL_VERSION)
 
     def test_hooks_call_injected_code(self) -> None:
         for call in (exe_hooks.FRAME_HOOK_CALL, exe_hooks.ENDING_HOOK_CALL, exe_hooks.GIVE_ITEM_CALL,

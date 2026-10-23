@@ -4,8 +4,8 @@ import struct
 REGISTERS = {name: code for code, name in enumerate(
     ["zero", "at", "v0", "v1", "a0", "a1", "a2", "a3", "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
      "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"])}
-ZERO, A0, A1, T0, T1, T2, T9, S1, SP, RA = (REGISTERS[name] for name in
-                                            ("zero", "a0", "a1", "t0", "t1", "t2", "t9", "s1", "sp", "ra"))
+ZERO, V0, A0, A1, T0, T1, T2, T9, S1, SP, RA = (REGISTERS[name] for name in
+                                                ("zero", "v0", "a0", "a1", "t0", "t1", "t2", "t9", "s1", "sp", "ra"))
 
 
 class MipsCode:
@@ -50,6 +50,13 @@ class MipsCode:
 
     def sw(self, source: int, base: int, offset: int = 0) -> "MipsCode":
         return self._op(0xAC000000 | (base << 21) | (source << 16) | (offset & 0xFFFF))
+
+    def lhu(self, to: int, base: int, offset: int = 0, load_delay: bool = True) -> "MipsCode":
+        self._op(0x94000000 | (base << 21) | (to << 16) | (offset & 0xFFFF))
+        return self.nop() if load_delay else self
+
+    def sh(self, source: int, base: int, offset: int = 0) -> "MipsCode":
+        return self._op(0xA4000000 | (base << 21) | (source << 16) | (offset & 0xFFFF))
 
     def _branch(self, opcode: int, label: str) -> "MipsCode":
         self.pending.append((len(self.words), label))

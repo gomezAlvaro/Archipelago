@@ -1,6 +1,6 @@
 """
 Talks to a running, Archipelago-patched Alundra through its RAM. This module doesn't know how the memory is accessed
-(BizHawk, PCSX-Redux...): it only needs an object with ``read`` and ``write`` coroutines using PlayStation RAM
+(BizHawk, PCSX-Redux...): it only needs an object with ``read`` and ``guarded_write`` coroutines using PlayStation RAM
 addresses (0x80000000 based).
 
 RAM layout (see PatchArchipelago.java in the randomizer):
@@ -17,12 +17,15 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import NamedTuple, Protocol
 
-from . import data
+from . import data, exe_hooks
 
 MAILBOX = 0x8001F800 - 0xC0
 MAILBOX_MAGIC = b"ALAP"
 MAILBOX_SIZE = 0xC0
 MESSAGE_OFFSET = 20
+SLOT_NAME_OFFSET = exe_hooks.SLOT_NAME_OFFSET
+SEED_NAME_OFFSET = exe_hooks.SEED_NAME_OFFSET
+VERSION_OFFSET = exe_hooks.VERSION_OFFSET
 MESSAGE_MAX_LENGTH = 0x60 - MESSAGE_OFFSET - 1
 
 FLAGS_BASE = 0x801DD334
@@ -34,6 +37,7 @@ INVENTORY_BASE = 0x801DD82E
 COUNTER_ITEM_ID = 0x3A
 COUNTER_ADDRESS = INVENTORY_BASE + COUNTER_ITEM_ID * 4 + 2
 INVENTORY_SIZE = COUNTER_ITEM_ID * 4
+assert COUNTER_ADDRESS == exe_hooks.ITEM_COUNTER_ADDRESS
 # Number of consecutive polls where the memory must look like a started game before it is trusted
 STABLE_POLLS = 3
 
@@ -47,7 +51,9 @@ MESSAGE_DURATION = 4.5
 class Memory(Protocol):
     async def read(self, address: int, size: int) -> bytes: ...
 
-    async def write(self, address: int, data: bytes) -> None: ...
+    async def guarded_write(self, writes: list[tuple[int, bytes]], guards: list[tuple[int, bytes]]) -> bool:
+        """Does all the writes at once (between two frames of the game) if the memory holds all the guards"""
+        ...
 
 
 class ReceivedItem(NamedTuple):
@@ -105,10 +111,12 @@ class AlundraSync:
     async def step(self, memory: Memory, received: list[ReceivedItem], already_checked: set[int]) -> SyncResult:
         mailbox = await memory.read(MAILBOX, MAILBOX_SIZE)
         if mailbox[:4] != MAILBOX_MAGIC:
+            self.stable_polls = 0
             return SyncResult("The game is not running or was not patched for Archipelago")
 
         flags = await memory.read(FLAGS_BASE, FLAGS_SIZE)
         if not flag_is_set(flags, HUD_FLAG):
+            self.stable_polls = 0  # back to the title screen: the next game must be stable again before it is trusted
             return SyncResult("Waiting for a game to start")
         # While a game is loading, this memory holds other data (the flags and the inventory look like noise). A real
         # inventory has small quantities (the upper byte of each one is 0) and always holds the starting items.
@@ -138,28 +146,32 @@ class AlundraSync:
             return  # the game didn't process the previous request yet
 
         counter = struct.unpack("<H", await memory.read(COUNTER_ADDRESS, 2))[0]
+        # Every write below is guarded by the counter it was computed from and by the free mailbox, so nothing is
+        # written if a save was loaded or the game took a request meanwhile
+        free_mailbox = [(MAILBOX + 4, bytes(4)), (MAILBOX + 12, bytes(4))]
         skipped = counter
-        while counter < len(received) and self._is_given_by_game(received[counter]):
-            counter += 1
-        if counter != skipped:
-            await memory.write(COUNTER_ADDRESS, struct.pack("<H", counter))
+        while skipped < len(received) and self._is_given_by_game(received[skipped]):
+            skipped += 1
+        if skipped != counter:
+            if not await memory.guarded_write([(COUNTER_ADDRESS, struct.pack("<H", skipped))],
+                                              [(COUNTER_ADDRESS, struct.pack("<H", counter)), *free_mailbox]):
+                return
+            counter = skipped
 
-        if time.monotonic() - self.last_message_time < MESSAGE_DURATION:
+        if counter >= len(received) or time.monotonic() - self.last_message_time < MESSAGE_DURATION:
             return
 
-        game_item = 0
-        if counter >= len(received):
-            return
         item = received[counter]
-        game_item = self.game_item_ids.get(item.item_id, 0)
+        game_item = self.game_item_ids.get(item.item_id) or exe_hooks.NO_GAME_ITEM
         sender = "Archipelago" if item.player == 0 else self.player_name(item.player)
         text = clean_text(f"Received {self.item_name(item.item_id)} from {sender}")
-        counter += 1
 
-        # The message and the item are requested separately: the game handles each of them on its own
-        await memory.write(COUNTER_ADDRESS, struct.pack("<H", counter))
-        await memory.write(MAILBOX + MESSAGE_OFFSET, text + b"\0")
-        await memory.write(MAILBOX + 12, struct.pack("<I", 1))
-        if game_item:
-            await memory.write(MAILBOX + 4, struct.pack("<I", game_item))
-        self.last_message_time = time.monotonic()
+        # The game gives the item and counts it in the save in the same frame, and shows the message once it can.
+        # The item is written last: it is what tells the game that the request is complete.
+        if await memory.guarded_write(
+                [(MAILBOX + MESSAGE_OFFSET, text + b"\0"),
+                 (MAILBOX + 8, struct.pack("<I", counter + 1)),
+                 (MAILBOX + 12, struct.pack("<I", 1)),
+                 (MAILBOX + 4, struct.pack("<I", game_item))],
+                [(COUNTER_ADDRESS, struct.pack("<H", counter)), *free_mailbox]):
+            self.last_message_time = time.monotonic()
