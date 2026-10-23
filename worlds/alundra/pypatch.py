@@ -26,6 +26,9 @@ SLOT_NAME_OFFSET, SEED_NAME_OFFSET, MAILBOX_SIZE = 0x60, 0x80, 0xC0
 
 RUNS_MAGIC = b"ARUN"
 
+# Table of the texts shown when opening a chest holding an item of another world (the game's size, see PatchArchipelago)
+ITEM_BOX_ENTRY_SIZE, ITEM_BOX_ENTRIES = 80, 320
+
 # Name the game shows for the items of other worlds. It is also what the patch data holds in the text naming the item
 # of a location, which is replaced by the name of the actual item here.
 PLACEHOLDER_NAME = "Archipelago item"
@@ -116,6 +119,27 @@ def apply_item_texts(datas: bytearray, names: dict[str, str]) -> None:
         datas[start:start + strings_size] = encoded.ljust(strings_size, b"\0")
 
 
+def apply_item_box_texts(exe: bytearray, manifest: dict[str, Any], patch: dict[str, Any]) -> None:
+    """
+    Fills the table the game reads when a chest holds an item of another world, which gives the text of the box:
+    entries of the story flag of the chest followed by the null-terminated text.
+    """
+    entries = []
+    for location in patch["locations"]:
+        if location["item"] is not None or "name_of_item" not in location:
+            continue
+        text = f"Sent {location['name_of_item']} to {location.get('recipient', 'another player')}"
+        entries.append((data.LOCATIONS[location["name"]][2], _ascii_field(text, ITEM_BOX_ENTRY_SIZE - 4)))
+    if len(entries) > ITEM_BOX_ENTRIES:
+        raise DiscError("Too many items of other worlds for the game")
+    table = manifest["text_table_offset"]
+    if bytes(exe[table:table + ITEM_BOX_ENTRY_SIZE * ITEM_BOX_ENTRIES]).count(0) != ITEM_BOX_ENTRY_SIZE * ITEM_BOX_ENTRIES:
+        raise DiscError("The patch data of the Alundra world is corrupted (text table not empty)")
+    for index, (flag, text) in enumerate(entries):
+        position = table + index * ITEM_BOX_ENTRY_SIZE
+        exe[position:position + ITEM_BOX_ENTRY_SIZE] = struct.pack("<I", flag) + text
+
+
 def apply_seed(files: dict[str, bytearray], manifest: dict[str, Any], patch: dict[str, Any]) -> None:
     """Writes what depends on the seed inside the files patched with the data of the world"""
     addresses = json.loads(_resource("seed_sources.json"))
@@ -136,6 +160,7 @@ def apply_seed(files: dict[str, bytearray], manifest: dict[str, Any], patch: dic
     apply_item_texts(datas, names)
 
     exe = files[manifest["exe_file"]]
+    apply_item_box_texts(exe, manifest, patch)
     mailbox = manifest["mailbox_offset"]
     if exe[mailbox:mailbox + 4] != MAILBOX_MAGIC:
         raise DiscError("The patch data of the Alundra world is corrupted (mailbox not found)")

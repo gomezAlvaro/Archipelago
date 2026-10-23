@@ -50,7 +50,7 @@ class TestBuildGame(unittest.TestCase):
         names = list(data.LOCATIONS)
         patch = {"seed_name": "seed", "player_name": "Quester",
                  "locations": [{"name": n, "item": "Herbs"} if i % 2 else
-                                 {"name": n, "item": None, "name_of_item": "Hookshot of the Wind Waker, long",
+                                 {"name": n, "item": None, "name_of_item": "Hookshot of the Wind Waker, long", "recipient": "Link",
                                   **({"sprite": "Herbs"} if i % 4 == 0 else {})}
                                  for i, n in enumerate(names)]}
         with tempfile.TemporaryDirectory() as directory:

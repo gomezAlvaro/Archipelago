@@ -145,7 +145,8 @@ class AlundraWorld(World):
                 continue
             # Items of other worlds are a placeholder which gives nothing, with the real name for the dialogues
             # naming it, and the sprite of the item when it is one of Alundra
-            location = {"name": name, "item": None, "name_of_item": item.name}
+            location = {"name": name, "item": None, "name_of_item": item.name,
+                        "recipient": self.multiworld.get_player_name(item.player)}
             if item.game == self.game and item.name in data.ITEMS:
                 location["sprite"] = item.name
             locations.append(location)
