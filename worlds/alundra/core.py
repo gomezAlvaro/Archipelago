@@ -85,12 +85,18 @@ class AlundraSync:
         self.game_item_ids = {item_id: game_id for item_id, _, game_id in data.ITEMS.values()}
         self.location_ids = set(self.location_flags)
         self.checked: set[int] = set()
+        # Remote items found in locations: location ID -> (item name, player name), to announce them in-game
+        self.scouted: dict[int, tuple[str, str]] = {}
+        self.announced: set[int] = set()
+        self.messages: list[bytes] = []
         self.last_message_time = 0.0
         self.stable_polls = 0
 
     def reset(self) -> None:
         """To call when the client (re)connects to the server"""
         self.checked.clear()
+        self.announced.clear()
+        self.messages.clear()
         self.stable_polls = 0
 
     def _is_given_by_game(self, item: ReceivedItem) -> bool:
@@ -128,6 +134,10 @@ class AlundraSync:
                 self.checked.add(location_id)
                 if location_id not in already_checked:
                     result.new_locations.add(location_id)
+                if location_id in self.scouted and location_id not in self.announced:
+                    self.announced.add(location_id)
+                    item, player = self.scouted[location_id]
+                    self.messages.append(clean_text(f"Sent {item} to {player}"))
 
         await self._deliver(memory, mailbox, received)
         return result
@@ -148,13 +158,16 @@ class AlundraSync:
             return
 
         game_item = 0
-        if counter >= len(received):
+        if counter < len(received):
+            item = received[counter]
+            game_item = self.game_item_ids.get(item.item_id, 0)
+            sender = "Archipelago" if item.player == 0 else self.player_name(item.player)
+            text = clean_text(f"Received {self.item_name(item.item_id)} from {sender}")
+            counter += 1
+        elif self.messages:
+            text = self.messages.pop(0)
+        else:
             return
-        item = received[counter]
-        game_item = self.game_item_ids.get(item.item_id, 0)
-        sender = "Archipelago" if item.player == 0 else self.player_name(item.player)
-        text = clean_text(f"Received {self.item_name(item.item_id)} from {sender}")
-        counter += 1
 
         # The message and the item are requested separately: the game handles each of them on its own
         await memory.write(COUNTER_ADDRESS, struct.pack("<H", counter))
