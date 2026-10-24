@@ -125,10 +125,9 @@ def location_item_ids(location: dict[str, Any], has_sprite: bool) -> tuple[int, 
     item_id = ITEM_PLACEHOLDER if location["item"] is None else data.ITEMS[location["item"]][2]
     sprite_id = data.ITEMS[location["sprite"]][2] if location.get("sprite") else item_id
     # An item of another player's Alundra world keeps its own sprite. A chest has no separate sprite: it holds the
-    # item itself, which the game doesn't give since its chest is in the table of other worlds' items. Not a
-    # consumable a full stack can't take: the game would refuse to open the chest, so it would never be checked.
-    if location["item"] is None and location.get("sprite") and "name_of_item" in location and not has_sprite \
-            and sprite_id not in exe_hooks.CAPPED_ITEMS:
+    # item itself, which the game doesn't give since its chest is in the table of other worlds' items (the table also
+    # tells the game that the player can carry it, so a full stack of it doesn't keep the chest shut).
+    if location["item"] is None and location.get("sprite") and "name_of_item" in location and not has_sprite:
         item_id = sprite_id
     return item_id, sprite_id
 

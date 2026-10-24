@@ -18,7 +18,17 @@ def fake_exe() -> bytes:
     struct.pack_into("<IIII", exe, 0x10, 0x8008DDA0, 0, CODE_START, BODY_SIZE)
     mailbox = exe_hooks.HEADER_SIZE + exe_hooks.MAILBOX_ADDRESS - CODE_START
     exe[mailbox:mailbox + 4] = exe_hooks.MAILBOX_MAGIC
+    for call, target in HOOKS:
+        site = exe_hooks.HEADER_SIZE + call - CODE_START
+        exe[site:site + 4] = MipsCode().jal(target, False).to_bytes()
     return bytes(exe)
+
+
+HOOKS = [(exe_hooks.FRAME_HOOK_CALL, exe_hooks.FRAME_HOOK_ORIGINAL_TARGET),
+         (exe_hooks.ENDING_HOOK_CALL, exe_hooks.ENDING_HOOK_ORIGINAL_TARGET),
+         (exe_hooks.GIVE_ITEM_CALL, exe_hooks.FUN_OBTAIN_ITEM),
+         (exe_hooks.ITEM_MESSAGE_CALL, exe_hooks.FUN_SHOW_MESSAGE),
+         (exe_hooks.CAN_CARRY_CALL, exe_hooks.FUN_CAN_CARRY)]
 
 
 class TestMips(unittest.TestCase):
@@ -104,8 +114,7 @@ class TestInstall(unittest.TestCase):
                          exe_hooks.PROTOCOL_VERSION)
 
     def test_hooks_call_injected_code(self) -> None:
-        for call in (exe_hooks.FRAME_HOOK_CALL, exe_hooks.ENDING_HOOK_CALL, exe_hooks.GIVE_ITEM_CALL,
-                     exe_hooks.ITEM_MESSAGE_CALL):
+        for call, _ in HOOKS:
             word, = struct.unpack_from("<I", self.result, self.offset(call))
             target = (word & 0x03FFFFFF) << 2 | 0x80000000
             self.assertEqual(word >> 26, 3)  # jal
@@ -124,6 +133,13 @@ class TestInstall(unittest.TestCase):
         position = result.index(struct.pack("<I", 1) + b"x")
         text = result[position + 4:position + exe_hooks.TEXT_ENTRY_SIZE]
         self.assertEqual(text.index(0), exe_hooks.TEXT_MAX_LENGTH)
+
+    def test_unexpected_code_at_a_hook(self) -> None:
+        exe = bytearray(self.exe)
+        site = exe_hooks.HEADER_SIZE + exe_hooks.CAN_CARRY_CALL - CODE_START
+        exe[site:site + 4] = bytes(4)
+        with self.assertRaises(exe_hooks.ExeError):
+            exe_hooks.install(bytes(exe), "a", "b", [])
 
     def test_executable_without_mailbox(self) -> None:
         exe = bytearray(self.exe)

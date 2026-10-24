@@ -28,11 +28,10 @@ class TestLocationItems(unittest.TestCase):
         sword = data.ITEMS["Sword"][2]
         self.assertEqual(pypatch.location_item_ids(self.other_player("Sword"), False), (sword, sword))
 
-    def test_a_chest_never_holds_a_capped_consumable_of_another_player(self) -> None:
+    def test_a_chest_shows_another_players_consumable(self) -> None:
         for name in ("Herbs", "Strength Elixyr", "Magic Elixyr", "Wonder Essence", "Strength Tonic"):
-            self.assertIn(data.ITEMS[name][2], exe_hooks.CAPPED_ITEMS)
             item_id, _ = pypatch.location_item_ids(self.other_player(name), False)
-            self.assertEqual(item_id, pypatch.ITEM_PLACEHOLDER, name)
+            self.assertEqual(item_id, data.ITEMS[name][2], name)
 
     def test_own_items_are_stored_as_they_are(self) -> None:
         herbs = data.ITEMS["Herbs"][2]

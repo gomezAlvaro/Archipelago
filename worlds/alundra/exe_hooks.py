@@ -38,8 +38,6 @@ MESSAGE_OFFSET = 20
 ITEM_PLACEHOLDER = 0x1E
 # Asks the game to count a received item without giving anything
 NO_GAME_ITEM = 0xFFFFFFFF
-# Items a full stack can't take: a chest holding one doesn't open, so it can't stand for another world's item
-CAPPED_ITEMS = frozenset({0x24, 0x25, 0x26, 0x27, 0x29})
 # Quantity (halfword) of an unused inventory item, saved with the game: the number of items received so far
 ITEM_COUNTER_ADDRESS = 0x801DD82E + 0x3A * 4 + 2
 
@@ -52,6 +50,12 @@ FUN_OBTAIN_ITEM = 0x800344D4
 GIVE_ITEM_CALL = 0x8007EB4C
 ITEM_MESSAGE_CALL = 0x8007EB14
 FUN_SHOW_MESSAGE = 0x8004608C
+# Second argument of FUN_SHOW_MESSAGE: 0 freezes the world (player and enemies) until the box is closed, like a
+# dialogue; 1, used by chests, doesn't (a chest holds the player still with its own pickup animation)
+MESSAGE_FREEZES_WORLD = 0
+# When a chest opens it asks whether the player can carry its item (A0 = item ID): a full stack keeps it shut
+CAN_CARRY_CALL = 0x8008264C
+FUN_CAN_CARRY = 0x80034458
 # Returns non-zero while a message box is open (the game checks it before opening its own)
 FUN_MESSAGE_BUSY = 0x80045F8C
 FUN_PLAY_SOUND = 0x8004A128
@@ -82,10 +86,6 @@ def _ascii_field(text: str, size: int) -> bytes:
     return text.encode("ascii", "replace")[:size - 1].ljust(size, b"\0")
 
 
-def text_entry(flag: int, text: str) -> bytes:
-    return struct.pack("<I", flag) + _ascii_field(clean_text(text), TEXT_ENTRY_SIZE - 4)
-
-
 def _utf8_field(text: str, size: int) -> bytes:
     encoded = text.encode("utf-8")
     if len(encoded) >= size:
@@ -103,13 +103,20 @@ def clean_text(text: str) -> str:
     return "".join(c if 32 <= ord(c) < 127 and c not in "\\~" else "?" for c in text)
 
 
-def _search_table(code: MipsCode, table_address: int, not_found: str, found: str) -> None:
+def text_entry(flag: int, text: str) -> bytes:
+    return struct.pack("<I", flag) + _ascii_field(clean_text(text), TEXT_ENTRY_SIZE - 4)
+
+
+def _search_table(code: MipsCode, table_address: int, not_found: str, found: str, s1_is_chest: bool = False) -> None:
     """
     Looks for the story flag of the chest being opened in the text table, and branches to one of the labels with T1
-    pointing at its entry when found.
+    pointing at its entry when found. S1 is the object of the item the chest gives, or the chest itself.
     """
-    code.lw(T0, S1, ITEM_OBJECT_OFFSET)
-    code.lw(T0, T0, ITEM_OBJECT_FLAG_OFFSET)
+    if s1_is_chest:
+        code.lw(T0, S1, ITEM_OBJECT_FLAG_OFFSET)
+    else:
+        code.lw(T0, S1, ITEM_OBJECT_OFFSET)
+        code.lw(T0, T0, ITEM_OBJECT_FLAG_OFFSET)
     code.set_(T1, table_address)
     code.label("search_" + not_found)
     code.lw(T2, T1, 0)
@@ -152,8 +159,11 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
         size += len(block)
         return code_start - size
 
-    def hook(call_address: int, target: int) -> None:
-        exe[offset(call_address):offset(call_address) + 4] = MipsCode().jal(target, False).to_bytes()
+    def hook(call_address: int, original_target: int, target: int) -> None:
+        site = slice(offset(call_address), offset(call_address) + 4)
+        if exe[site] != MipsCode().jal(original_target, False).to_bytes():
+            raise ExeError(f"Unexpected code at {call_address:08X}")
+        exe[site] = MipsCode().jal(target, False).to_bytes()
 
     tick = MipsCode()
     tick.addiu(SP, SP, -0x20)
@@ -192,7 +202,7 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
     tick.set_(T0, MAILBOX_ADDRESS)
     tick.sw(ZERO, T0, 12)
     tick.addiu(A0, T0, MESSAGE_OFFSET)
-    tick.addiu(A1, ZERO, 1)
+    tick.addiu(A1, ZERO, MESSAGE_FREEZES_WORLD)
     tick.jal(FUN_SHOW_MESSAGE)
     tick.addiu(A0, ZERO, ITEM_JINGLE_SOUND)
     tick.jal(FUN_PLAY_SOUND)
@@ -202,7 +212,7 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
     tick.addiu(SP, SP, 0x20)
     # Tail call: the hooked function returns directly to the original caller
     tick.j(FRAME_HOOK_ORIGINAL_TARGET)
-    hook(FRAME_HOOK_CALL, inject(tick.to_bytes()))
+    hook(FRAME_HOOK_CALL, FRAME_HOOK_ORIGINAL_TARGET, inject(tick.to_bytes()))
 
     # The goal is reached when the ending starts
     goal = MipsCode()
@@ -210,13 +220,24 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
     goal.addiu(T1, ZERO, 1)
     goal.sw(T1, T0, 16)
     goal.j(ENDING_HOOK_ORIGINAL_TARGET)
-    hook(ENDING_HOOK_CALL, inject(goal.to_bytes()))
+    hook(ENDING_HOOK_CALL, ENDING_HOOK_ORIGINAL_TARGET, inject(goal.to_bytes()))
 
     # Items of other worlds must not be added to the inventory, and their box tells what they are. They are the chests
     # of the table. A chest holds either the placeholder or an item of Alundra whose sprite is shown for it. A chest
     # of another world without an entry still gives nothing and shows the game's own box.
     table = b"".join(text_entry(flag, text) for flag, text in texts) + bytes(4)
     table_address = inject(table)
+
+    # The player can always "carry" what a chest of the table holds, since nothing is given: a full stack of the item
+    # shown in it must not keep it shut
+    can_carry = MipsCode()
+    _search_table(can_carry, table_address, "check", "yes", s1_is_chest=True)
+    can_carry.label("yes")
+    can_carry.addiu(V0, ZERO, 1)
+    can_carry.jr(RA)
+    can_carry.label("check")
+    can_carry.j(FUN_CAN_CARRY)
+    hook(CAN_CARRY_CALL, FUN_CAN_CARRY, inject(can_carry.to_bytes()))
 
     give = MipsCode()
     give.beq_(A1, ITEM_PLACEHOLDER, "skip")
@@ -225,7 +246,7 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
     give.jr(RA)
     give.label("give")
     give.j(FUN_OBTAIN_ITEM)
-    hook(GIVE_ITEM_CALL, inject(give.to_bytes()))
+    hook(GIVE_ITEM_CALL, FUN_OBTAIN_ITEM, inject(give.to_bytes()))
 
     message = MipsCode()
     _search_table(message, table_address, "show", "found")
@@ -233,7 +254,7 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
     message.addiu(A0, T1, 4)
     message.label("show")
     message.j(FUN_SHOW_MESSAGE)
-    hook(ITEM_MESSAGE_CALL, inject(message.to_bytes()))
+    hook(ITEM_MESSAGE_CALL, FUN_SHOW_MESSAGE, inject(message.to_bytes()))
 
     # Prepend the blocks, the last one injected being the lowest, and update the header
     expansion = -(-size // EXPANSION_STEP) * EXPANSION_STEP
