@@ -141,8 +141,8 @@ def apply_seed(files: dict[str, bytearray], manifest: dict[str, Any], patch: dic
     for location in patch["locations"]:
         source = addresses[location["name"]]
         # The dialogues have room for the placeholder's length only
-        names[location["name"]] = (location["item"] or location.get("name_of_item") or PLACEHOLDER_NAME) \
-            .encode("ascii", "replace").decode("ascii")[:len(PLACEHOLDER_NAME)]
+        names[location["name"]] = exe_hooks.clean_text(
+            location["item"] or location.get("name_of_item") or PLACEHOLDER_NAME)[:len(PLACEHOLDER_NAME)]
         item_id, sprite_id = location_item_ids(location, bool(source["sprites"]))
         for address in source["addresses"]:
             datas[address] = item_id

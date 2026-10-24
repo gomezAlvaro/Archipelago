@@ -8,8 +8,9 @@
 
 ## Configuring your game
 
-1. Run the Archipelago launcher once to create `host.yaml`, then set `alundra_settings` in it: `rom_file` is your
-   `.bin` file. The game is built by a patcher included in the world, nothing else is needed.
+1. The first time you open an `.apalundra` file, Archipelago asks for your disc image: pick the `.bin` file. It is
+   remembered as `rom_file` under `alundra_settings` in `host.yaml`. The game is built by a patcher included in the
+   world, nothing else is needed.
 2. Export your YAML from the options page, or use the template provided by the launcher, and give it to the person
    generating the multiworld.
 

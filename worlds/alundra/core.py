@@ -74,9 +74,7 @@ def flag_is_set(flags: bytes, flag: int) -> bool:
 
 
 def clean_text(text: str) -> bytes:
-    """The game's font only has plain ASCII, and some characters are control codes."""
-    text = "".join(c if 32 <= ord(c) < 127 and c not in "\\~" else "?" for c in text)
-    return text[:MESSAGE_MAX_LENGTH].encode("ascii")
+    return exe_hooks.clean_text(text)[:MESSAGE_MAX_LENGTH].encode("ascii")
 
 
 class AlundraSync:
@@ -113,11 +111,14 @@ class AlundraSync:
         if mailbox[:4] != MAILBOX_MAGIC:
             self.stable_polls = 0
             return SyncResult("The game is not running or was not patched for Archipelago")
+        # Only the game's ending sets it, and it stays set until the console is reset: it is trusted even when no game
+        # is running (the credits and the title screen after them), so a client connecting after the ending sends it
+        goal_reached = struct.unpack_from("<I", mailbox, 16)[0] == 1
 
         flags = await memory.read(FLAGS_BASE, FLAGS_SIZE)
         if not flag_is_set(flags, HUD_FLAG):
             self.stable_polls = 0  # back to the title screen: the next game must be stable again before it is trusted
-            return SyncResult("Waiting for a game to start")
+            return SyncResult("Waiting for a game to start", goal_reached=goal_reached)
         # While a game is loading, this memory holds other data (the flags and the inventory look like noise). A real
         # inventory has small quantities (the upper byte of each one is 0) and always holds the starting items.
         inventory = await memory.read(INVENTORY_BASE, INVENTORY_SIZE)
@@ -126,10 +127,9 @@ class AlundraSync:
         else:
             self.stable_polls += 1
         if self.stable_polls < STABLE_POLLS:
-            return SyncResult("Waiting for a game to start")
+            return SyncResult("Waiting for a game to start", goal_reached=goal_reached)
 
-        result = SyncResult()
-        result.goal_reached = struct.unpack_from("<I", mailbox, 16)[0] == 1
+        result = SyncResult(goal_reached=goal_reached)
 
         for location_id, flag in self.location_flags.items():
             if location_id not in self.checked and flag_is_set(flags, flag):

@@ -122,8 +122,9 @@ class AlundraWorld(World):
         itempool = [self.create_item(name) for name, count in pool.items() for _ in range(count)]
         unfilled = len(self.multiworld.get_unfilled_locations(self.player)) - len(itempool)
         if unfilled < 0:
-            # Too many items: drop filler
-            filler = [item for item in itempool if item.classification == ItemClassification.filler]
+            # Too many items: drop filler, but no Gilded Falcon (Merrick wants all 50 for his last trade)
+            filler = [item for item in itempool
+                      if item.classification == ItemClassification.filler and item.name != "Gilded Falcon"]
             for item in filler[:-unfilled]:
                 itempool.remove(item)
         else:

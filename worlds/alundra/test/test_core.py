@@ -236,6 +236,14 @@ class TestSync(unittest.TestCase):
         self.memory.write_at(core.MAILBOX + 16, struct.pack("<I", 1))
         self.assertTrue(run(self.sync.step(self.memory, [], set())).goal_reached)
 
+    def test_goal_is_seen_after_the_game_left_its_ending(self) -> None:
+        # A client connecting during the credits or at the title screen after them
+        self.memory.write_at(core.MAILBOX + 16, struct.pack("<I", 1))
+        self.memory.ram[(core.FLAGS_BASE & 0x1FFFFF) + (core.HUD_FLAG >> 3)] = 0
+        self.assertTrue(run(make_sync().step(self.memory, [], set())).goal_reached)
+        self.memory.set_flag(core.HUD_FLAG)
+        self.assertTrue(run(make_sync().step(self.memory, [], set())).goal_reached)
+
     def test_text_is_plain_ascii(self) -> None:
-        self.assertEqual(core.clean_text(r"Ünïcode ~ \ ok"), b"?n?code ? ? ok")
+        self.assertEqual(core.clean_text(r"Ünïcode ~ \ ok 🎮"), b"Unicode ? ? ok ?")
         self.assertEqual(len(core.clean_text("x" * 500)), core.MESSAGE_MAX_LENGTH)

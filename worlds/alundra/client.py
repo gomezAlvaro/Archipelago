@@ -42,6 +42,7 @@ class AlundraClient(BizHawkClient):
         self.slot_name = ""
         self.seed_name = ""
         self.version_error_shown = False
+        self.goal_sent = False
 
     async def validate_rom(self, ctx: "BizHawkClientContext") -> bool:
         from worlds._bizhawk import RequestFailedError, read
@@ -61,7 +62,7 @@ class AlundraClient(BizHawkClient):
                 self.version_error_shown = True
             return False
 
-        self.slot_name = mailbox[core.SLOT_NAME_OFFSET:core.SEED_NAME_OFFSET].split(b"\0")[0].decode("ascii", "replace")
+        self.slot_name = mailbox[core.SLOT_NAME_OFFSET:core.SEED_NAME_OFFSET].split(b"\0")[0].decode("utf-8", "replace")
         self.seed_name = mailbox[core.SEED_NAME_OFFSET:core.VERSION_OFFSET].split(b"\0")[0].decode("ascii", "replace")
         ctx.game = self.game
         ctx.items_handling = 0b111
@@ -75,6 +76,7 @@ class AlundraClient(BizHawkClient):
     def on_package(self, ctx: "BizHawkClientContext", cmd: str, args: dict[str, Any]) -> None:
         if cmd == "Connected":
             self.sync = None
+            self.goal_sent = False
 
     def _built_for_another_multiworld(self, ctx: "BizHawkClientContext") -> bool:
         # The game holds as much of the seed name as fits in its mailbox
@@ -106,6 +108,9 @@ class AlundraClient(BizHawkClient):
 
         if result.new_locations:
             await ctx.send_msgs([{"cmd": "LocationChecks", "locations": sorted(result.new_locations)}])
-        if result.goal_reached and not ctx.finished_game:
+        if result.goal_reached and not self.goal_sent:
+            # Sent again after every (re)connection: harmless if the server already has it, and not lost if the
+            # connection dropped while sending it
+            self.goal_sent = True
             ctx.finished_game = True
             await ctx.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}])

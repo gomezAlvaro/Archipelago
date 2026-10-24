@@ -78,9 +78,24 @@ class TestInstall(unittest.TestCase):
         mailbox = self.offset(exe_hooks.MAILBOX_ADDRESS)
         self.assertEqual(self.result[mailbox:mailbox + 4], exe_hooks.MAILBOX_MAGIC)
         self.assertEqual(self.result[mailbox + 0x60:mailbox + 0x68], b"Quester\0")
-        self.assertEqual(self.result[mailbox + 0x80:mailbox + 0x85], b"seed\0")
+        seed = mailbox + exe_hooks.SEED_NAME_OFFSET
+        self.assertEqual(self.result[seed:seed + 5], b"seed\0")
         self.assertEqual(struct.unpack_from("<I", self.result, mailbox + exe_hooks.VERSION_OFFSET)[0],
                          exe_hooks.PROTOCOL_VERSION)
+
+    def test_slot_names_are_utf8(self) -> None:
+        mailbox = self.offset(exe_hooks.MAILBOX_ADDRESS)
+        field = slice(mailbox + exe_hooks.SLOT_NAME_OFFSET, mailbox + exe_hooks.SEED_NAME_OFFSET)
+        seed = mailbox + exe_hooks.SEED_NAME_OFFSET
+        # The longest name Archipelago allows, with the longest characters, still fits
+        for name in ("Zoë", "🎮" * 16):
+            result = exe_hooks.install(self.exe, name, "12345678901234567890", [])
+            self.assertEqual(result[field].split(b"\0")[0].decode("utf-8"), name)
+            self.assertEqual(result[seed:seed + 21], b"12345678901234567890\0")
+
+    def test_texts_are_cleaned(self) -> None:
+        result = exe_hooks.install(self.exe, "a", "b", [(1, "Sent ~Zoë's\\ item to Chloé")])
+        self.assertIn(struct.pack("<I", 1) + b"Sent ?Zoe's? item to Chloe\0", result)
 
     def test_a_long_seed_name_leaves_the_version(self) -> None:
         result = exe_hooks.install(self.exe, "a", "9" * 100, [])

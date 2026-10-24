@@ -11,8 +11,8 @@ Mailbox layout (little-endian words, at MAILBOX_ADDRESS):
          another box is open)
     +16  set to 1 by the game when the ending starts
     +20  null-terminated message text, up to 75 characters
-    +96  name of the Archipelago slot (null-terminated, up to 31 characters), used by the client to log in
-    +128 name of the multiworld seed (null-terminated, up to 59 characters)
+    +96  name of the Archipelago slot (UTF-8, null-terminated, up to 67 bytes), used by the client to log in
+    +164 name of the multiworld seed (null-terminated, up to 23 characters)
     +188 PROTOCOL_VERSION (0 in games built before it existed)
 
 Once per frame, the game checks the mailbox, gives the requested item through its own item pickup routine and counts
@@ -20,15 +20,18 @@ it in the save, shows the message if there is one and frees the mailbox. A chest
 gives nothing and opens a box whose text is baked into a table of (story flag of the chest, text).
 """
 import struct
+import unicodedata
 
 from .mips import A0, A1, RA, S1, SP, T0, T1, T2, V0, ZERO, MipsCode
 
 MAILBOX_ADDRESS = 0x8001F740
 MAILBOX_SIZE = 0xC0
 MAILBOX_MAGIC = b"ALAP"
-SLOT_NAME_OFFSET, SEED_NAME_OFFSET, VERSION_OFFSET = 0x60, 0x80, 0xBC
+# The slot name has room for 16 characters (the most Archipelago allows) of up to 4 UTF-8 bytes each. Seed names are
+# 20 digits.
+SLOT_NAME_OFFSET, SEED_NAME_OFFSET, VERSION_OFFSET = 0x60, 0xA4, 0xBC
 # Version of the way the game and the client talk through the mailbox: a client refuses a game of another version
-PROTOCOL_VERSION = 2
+PROTOCOL_VERSION = 3
 MESSAGE_OFFSET = 20
 
 # Unused item ID used for items belonging to other worlds
@@ -80,7 +83,24 @@ def _ascii_field(text: str, size: int) -> bytes:
 
 
 def text_entry(flag: int, text: str) -> bytes:
-    return struct.pack("<I", flag) + _ascii_field(text, TEXT_ENTRY_SIZE - 4)
+    return struct.pack("<I", flag) + _ascii_field(clean_text(text), TEXT_ENTRY_SIZE - 4)
+
+
+def _utf8_field(text: str, size: int) -> bytes:
+    encoded = text.encode("utf-8")
+    if len(encoded) >= size:
+        # Cut on a character boundary
+        encoded = encoded[:size - 1].decode("utf-8", "ignore").encode("utf-8")
+    return encoded.ljust(size, b"\0")
+
+
+def clean_text(text: str) -> str:
+    """
+    Text the game can show: its font only has plain ASCII, and "~" and "\\" are control codes. Accented letters lose
+    their accent, other characters become "?".
+    """
+    text = "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c))
+    return "".join(c if 32 <= ord(c) < 127 and c not in "\\~" else "?" for c in text)
 
 
 def _search_table(code: MipsCode, table_address: int, not_found: str, found: str) -> None:
@@ -116,7 +136,7 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
     mailbox_offset = offset(MAILBOX_ADDRESS)
     if mailbox_offset < HEADER_SIZE or exe[mailbox_offset:mailbox_offset + 4] != MAILBOX_MAGIC:
         raise ExeError("The executable has no Archipelago mailbox")
-    exe[mailbox_offset + SLOT_NAME_OFFSET:mailbox_offset + SEED_NAME_OFFSET] = _ascii_field(
+    exe[mailbox_offset + SLOT_NAME_OFFSET:mailbox_offset + SEED_NAME_OFFSET] = _utf8_field(
         slot_name, SEED_NAME_OFFSET - SLOT_NAME_OFFSET)
     exe[mailbox_offset + SEED_NAME_OFFSET:mailbox_offset + VERSION_OFFSET] = _ascii_field(
         seed_name, VERSION_OFFSET - SEED_NAME_OFFSET)
