@@ -657,7 +657,7 @@ PATHS = [
     ("overworld_b4", "overworld_b4_behind_bomb", True, {"Bomb":1}, []),
     ("overworld_b4", "overworld_b4_nava_hut_behind_spring", True, {"Spring Bean":1}, []),
     ("overworld_b4", "nava_keep", True, {"Bomb":1,"Merman Boots":1,"Spring Bean":1}, []),
-    ("overworld_b4_behind_bomb", "overworld_a4_right", True, {}, []),
+    ("overworld_b4_behind_bomb", "overworld_a4_right", True, {"Bomb":1}, []),
     ("overworld_b4_behind_bomb", "overworld_b3_megalith", True, {"Iron Flail":1}, []),
     ("overworld_b4_behind_bomb", "overworld_b3_elevated", True, {"Iron Flail":1}, []),
     ("overworld_b3_elevated", "overworld_b3", False, {}, []),
