@@ -27,6 +27,7 @@ SLOT_NAME_OFFSET = exe_hooks.SLOT_NAME_OFFSET
 SEED_NAME_OFFSET = exe_hooks.SEED_NAME_OFFSET
 VERSION_OFFSET = exe_hooks.VERSION_OFFSET
 MESSAGE_MAX_LENGTH = 0x60 - MESSAGE_OFFSET - 1
+MENU_WINDOW_FLAGS = exe_hooks.MENU_WINDOW_FLAGS
 
 FLAGS_BASE = 0x801DD334
 FLAGS_SIZE = 0x100
@@ -160,6 +161,11 @@ class AlundraSync:
 
         if counter >= len(received) or time.monotonic() - self.last_message_time < MESSAGE_DURATION:
             return
+        # A message box opened over the inventory menu jams the game (see exe_hooks.MENU_WINDOW_FLAGS). Newer games
+        # wait for the menu to close by themselves; this also protects games patched before they did.
+        menu = await memory.read(MENU_WINDOW_FLAGS, 2)
+        if menu[0] & 1:
+            return
 
         item = received[counter]
         game_item = self.game_item_ids.get(item.item_id) or exe_hooks.NO_GAME_ITEM
@@ -173,5 +179,5 @@ class AlundraSync:
                  (MAILBOX + 8, struct.pack("<I", counter + 1)),
                  (MAILBOX + 12, struct.pack("<I", 1)),
                  (MAILBOX + 4, struct.pack("<I", game_item))],
-                [(COUNTER_ADDRESS, struct.pack("<H", counter)), *free_mailbox]):
+                [(COUNTER_ADDRESS, struct.pack("<H", counter)), (MENU_WINDOW_FLAGS, menu), *free_mailbox]):
             self.last_message_time = time.monotonic()

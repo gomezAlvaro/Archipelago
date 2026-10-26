@@ -41,6 +41,9 @@ class MipsCode:
     def addiu(self, to: int, source: int, value: int) -> "MipsCode":
         return self._op(0x24000000 | (source << 21) | (to << 16) | (value & 0xFFFF))
 
+    def andi(self, to: int, source: int, value: int) -> "MipsCode":
+        return self._op(0x30000000 | (source << 21) | (to << 16) | (value & 0xFFFF))
+
     def lui(self, register: int, value: int) -> "MipsCode":
         return self._op(0x3C000000 | (register << 16) | (value & 0xFFFF))
 

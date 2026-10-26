@@ -15,9 +15,10 @@ Mailbox layout (little-endian words, at MAILBOX_ADDRESS):
     +164 name of the multiworld seed (null-terminated, up to 23 characters)
     +188 PROTOCOL_VERSION (0 in games built before it existed)
 
-Once per frame, the game checks the mailbox, gives the requested item through its own item pickup routine and counts
-it in the save, shows the message if there is one and frees the mailbox. A chest holding an item of another world
-gives nothing and opens a box whose text is baked into a table of (story flag of the chest, text).
+Once per frame, unless the inventory menu is open, the game checks the mailbox, gives the requested item through its
+own item pickup routine and counts it in the save, shows the message if there is one and frees the mailbox. A chest
+holding an item of another world gives nothing and opens a box whose text is baked into a table of (story flag of the
+chest, text).
 """
 import struct
 import unicodedata
@@ -58,6 +59,13 @@ CAN_CARRY_CALL = 0x8008264C
 FUN_CAN_CARRY = 0x80034458
 # Returns non-zero while a message box is open (the game checks it before opening its own)
 FUN_MESSAGE_BUSY = 0x80045F8C
+# The game's text windows: 13 entries of 0x1C bytes, whose first halfword has bit 0 set while the window is open.
+# Window 6 is the inventory menu. A message box opened over it makes the game add the letters of the box twice to
+# the same drawing list, which then loops: the GPU never finishes a frame and the game crawls (one frame every few
+# seconds, kept by save states) until the console is reset.
+TEXT_WINDOWS = 0x80107570
+TEXT_WINDOW_SIZE = 0x1C
+MENU_WINDOW_FLAGS = TEXT_WINDOWS + 6 * TEXT_WINDOW_SIZE
 FUN_PLAY_SOUND = 0x8004A128
 ITEM_JINGLE_SOUND = 0x34
 # Start of the branch of the game starting its ending: its first call is hooked to flag the goal as reached
@@ -168,6 +176,12 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
     tick = MipsCode()
     tick.addiu(SP, SP, -0x20)
     tick.sw(RA, SP, 0x18)
+
+    # Nothing is given or shown while the inventory menu is open: the request waits in the mailbox
+    tick.set_(T0, MENU_WINDOW_FLAGS)
+    tick.lhu(T1, T0, 0)
+    tick.andi(T1, T1, 1)
+    tick.bne(T1, ZERO, "done")
 
     tick.set_(T0, MAILBOX_ADDRESS)
     tick.lw(T1, T0, 4)

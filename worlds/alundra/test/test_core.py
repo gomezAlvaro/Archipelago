@@ -34,6 +34,8 @@ class FakeMemory:
 
     def game_processes_mailbox(self, message_box_open: bool = False) -> None:
         """What the patched game does once per frame"""
+        if self.ram[core.MENU_WINDOW_FLAGS & 0x1FFFFF] & 1:
+            return
         base = core.MAILBOX & 0x1FFFFF
         item, target = struct.unpack_from("<II", self.ram, base + 4)
         if item:
@@ -189,6 +191,33 @@ class TestSync(unittest.TestCase):
         self.assertEqual(run(self.memory.read(core.MAILBOX + 4, 4)), bytes(4))
         self.memory.game_processes_mailbox()
         self.assertEqual(self.memory.messages, [f"Received item {SWORD[0]} from player 2"])
+
+    def test_waits_for_the_inventory_menu_to_close(self) -> None:
+        received = [core.ReceivedItem(SWORD[0], 12345, 2)]
+        self.memory.write_at(core.MENU_WINDOW_FLAGS, b"\1\0")
+        run(self.sync.step(self.memory, received, set()))
+        self.assertEqual(run(self.memory.read(core.MAILBOX + 4, 12)), bytes(12))
+        self.memory.write_at(core.MENU_WINDOW_FLAGS, b"\0\0")
+        run(self.sync.step(self.memory, received, set()))
+        self.memory.game_processes_mailbox()
+        self.assertEqual(self.memory.inventory, [SWORD[2]])
+        self.assertEqual(self.memory.messages, [f"Received item {SWORD[0]} from player 2"])
+
+    def test_nothing_is_written_if_the_menu_opens_meanwhile(self) -> None:
+        received = [core.ReceivedItem(SWORD[0], 12345, 2)]
+        memory = self.memory
+
+        class OpensTheMenu(FakeMemory):
+            async def read(self, address: int, size: int) -> bytes:
+                data = await memory.read(address, size)
+                if address == core.MENU_WINDOW_FLAGS:
+                    memory.write_at(core.MENU_WINDOW_FLAGS, b"\1\0")
+                return data
+
+        opening = OpensTheMenu()
+        opening.ram = memory.ram
+        run(self.sync.step(opening, received, set()))
+        self.assertEqual(run(memory.read(core.MAILBOX + 4, 12)), bytes(12))
 
     def test_items_without_a_game_item_are_still_counted(self) -> None:
         received = [core.ReceivedItem(123, 12345, 2)]

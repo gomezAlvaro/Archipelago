@@ -42,6 +42,9 @@ class TestMips(unittest.TestCase):
         code.lhu(A0, T0, 2, False).sh(A0, T0, 2)
         self.assertEqual(words(code), [0x95040002, 0xA5040002])
 
+    def test_andi_encoding(self) -> None:
+        self.assertEqual(words(MipsCode().andi(T1, T1, 1)), [0x31290001])
+
     def test_load_and_branch_delay_slots(self) -> None:
         code = MipsCode()
         code.lw(T1, T0, 4).beq(T1, ZERO, "end").label("end")
@@ -119,6 +122,13 @@ class TestInstall(unittest.TestCase):
             target = (word & 0x03FFFFFF) << 2 | 0x80000000
             self.assertEqual(word >> 26, 3)  # jal
             self.assertTrue(self.code_start <= target < CODE_START, hex(target))
+
+    def test_the_frame_hook_first_checks_the_inventory_menu(self) -> None:
+        word, = struct.unpack_from("<I", self.result, self.offset(exe_hooks.FRAME_HOOK_CALL))
+        tick = self.offset((word & 0x03FFFFFF) << 2 | 0x80000000)
+        expected = MipsCode().set_(T0, exe_hooks.MENU_WINDOW_FLAGS).lhu(T1, T0, 0).andi(T1, T1, 1).to_bytes()
+        # Right after saving the return address, before the mailbox is read
+        self.assertEqual(self.result[tick + 8:tick + 8 + len(expected)], expected)
 
     def test_table_of_texts(self) -> None:
         position = self.result.index(struct.pack("<I", 0x680) + b"Sent Hookshot to Link\0")
