@@ -12,7 +12,6 @@ RAM layout (see PatchArchipelago.java in the randomizer):
   saved along with the game
 """
 import struct
-import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import NamedTuple, Protocol
@@ -44,9 +43,6 @@ STABLE_POLLS = 3
 
 # Location ID the server uses for the items of the starting inventory
 STARTING_INVENTORY_LOCATION = -2
-
-# Time to leave a message on screen before showing the next one, in seconds
-MESSAGE_DURATION = 4.5
 
 
 class Memory(Protocol):
@@ -90,7 +86,6 @@ class AlundraSync:
         self.game_item_ids = {item_id: game_id for item_id, _, game_id in data.ITEMS.values()}
         self.location_ids = set(self.location_flags)
         self.checked: set[int] = set()
-        self.last_message_time = 0.0
         self.stable_polls = 0
 
     def reset(self) -> None:
@@ -159,7 +154,9 @@ class AlundraSync:
                 return
             counter = skipped
 
-        if counter >= len(received) or time.monotonic() - self.last_message_time < MESSAGE_DURATION:
+        # The game paces the items: it opens a message box only once the previous one is closed, and keeps the mailbox
+        # taken until then. It copies the text when it opens a box, so the next request can't change a box on screen.
+        if counter >= len(received):
             return
         # A message box opened over the inventory menu jams the game (see exe_hooks.MENU_WINDOW_FLAGS). Newer games
         # wait for the menu to close by themselves; this also protects games patched before they did.
@@ -174,10 +171,9 @@ class AlundraSync:
 
         # The game gives the item and counts it in the save in the same frame, and shows the message once it can.
         # The item is written last: it is what tells the game that the request is complete.
-        if await memory.guarded_write(
+        await memory.guarded_write(
                 [(MAILBOX + MESSAGE_OFFSET, text + b"\0"),
                  (MAILBOX + 8, struct.pack("<I", counter + 1)),
                  (MAILBOX + 12, struct.pack("<I", 1)),
                  (MAILBOX + 4, struct.pack("<I", game_item))],
-                [(COUNTER_ADDRESS, struct.pack("<H", counter)), (MENU_WINDOW_FLAGS, menu), *free_mailbox]):
-            self.last_message_time = time.monotonic()
+                [(COUNTER_ADDRESS, struct.pack("<H", counter)), (MENU_WINDOW_FLAGS, menu), *free_mailbox])

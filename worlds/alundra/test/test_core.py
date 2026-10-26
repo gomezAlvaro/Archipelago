@@ -83,7 +83,6 @@ class TestSync(unittest.TestCase):
         self.memory.set_flag(core.HUD_FLAG)
         self.memory.write_at(core.INVENTORY_BASE + 4 + 2, b"\1\0")  # a started game holds its starting items
         self.sync = make_sync()
-        self.sync.last_message_time = 0
         self.sync.stable_polls = core.STABLE_POLLS
 
     def test_waits_for_a_patched_game(self) -> None:
@@ -134,7 +133,6 @@ class TestSync(unittest.TestCase):
         run(self.sync.step(self.memory, received, set()))
         self.memory.game_processes_mailbox()
         self.assertEqual(self.memory.inventory, [SWORD[2]])
-        self.sync.last_message_time = 0
         run(self.sync.step(self.memory, received, set()))
         self.memory.game_processes_mailbox()
         self.assertEqual(self.memory.inventory, [SWORD[2]])
@@ -186,11 +184,18 @@ class TestSync(unittest.TestCase):
         self.assertEqual(self.memory.inventory, [SWORD[2]])
         self.assertEqual(self.memory.messages, [])
         # The next item waits for the message
-        self.sync.last_message_time = 0
         run(self.sync.step(self.memory, received, set()))
         self.assertEqual(run(self.memory.read(core.MAILBOX + 4, 4)), bytes(4))
         self.memory.game_processes_mailbox()
         self.assertEqual(self.memory.messages, [f"Received item {SWORD[0]} from player 2"])
+
+    def test_a_backlog_is_given_as_fast_as_the_boxes_close(self) -> None:
+        received = [core.ReceivedItem(SWORD[0], 12345 + i, 2) for i in range(3)]
+        for _ in received:
+            run(self.sync.step(self.memory, received, set()))
+            self.memory.game_processes_mailbox()
+        self.assertEqual(self.memory.inventory, [SWORD[2]] * 3)
+        self.assertEqual(len(self.memory.messages), 3)
 
     def test_waits_for_the_inventory_menu_to_close(self) -> None:
         received = [core.ReceivedItem(SWORD[0], 12345, 2)]
