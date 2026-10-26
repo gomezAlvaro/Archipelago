@@ -138,6 +138,21 @@ class TestInstall(unittest.TestCase):
         self.assertEqual(self.result[position + exe_hooks.TEXT_ENTRY_SIZE:position + exe_hooks.TEXT_ENTRY_SIZE + 4],
                          bytes(4))
 
+    def test_blocks_stay_below_the_stack(self) -> None:
+        # The table and the code called by the hooks are below the stack floor, and the RAM above is left empty
+        position = self.result.index(struct.pack("<I", 0x680) + b"Sent Hookshot to Link\0")
+        self.assertLess(self.code_start + position - exe_hooks.HEADER_SIZE, exe_hooks.STACK_FLOOR)
+        for call, _ in HOOKS:
+            word, = struct.unpack_from("<I", self.result, self.offset(call))
+            self.assertLess((word & 0x03FFFFFF) << 2 | 0x80000000, exe_hooks.STACK_FLOOR)
+        stack_room = self.result[self.offset(exe_hooks.STACK_FLOOR):self.offset(CODE_START)]
+        self.assertEqual(stack_room, bytes(len(stack_room)))
+
+    def test_a_text_for_every_location_fits(self) -> None:
+        result = exe_hooks.install(self.exe, "a", "b", [(i + 1, "x" * 200) for i in range(400)])
+        code_start, = struct.unpack_from("<I", result, 0x18)
+        self.assertGreaterEqual(code_start, exe_hooks.LOWEST_ADDRESS)
+
     def test_long_texts_are_cut(self) -> None:
         result = exe_hooks.install(self.exe, "a", "b", [(1, "x" * 200)])
         position = result.index(struct.pack("<I", 1) + b"x")

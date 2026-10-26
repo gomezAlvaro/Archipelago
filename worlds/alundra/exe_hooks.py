@@ -82,8 +82,15 @@ TEXT_MAX_LENGTH = TEXT_ENTRY_SIZE - 4 - 1
 HEADER_SIZE = 0x800
 # The executable grows by multiples of this size, in front of its original code
 EXPANSION_STEP = 0x800
-# Lowest address the injected code can reach (below it the BIOS keeps its data)
-LOWEST_ADDRESS = 0x80010000
+# The game's main() moves the stack to 0x8001FFF0, right in front of its code, and the stack grows down into the RAM
+# the injected blocks use. It mostly stays in its top 2 KB, but the text function at 0x80046FB4 takes a frame of
+# 0x1CA8 bytes, and its buffer and the functions it calls reach about 0x8001E000 (shop dialogues, for instance). A
+# block there gets overwritten: a chest text ended in saved registers, and the game hung drawing them. The blocks are
+# kept below this address, with a margin, and the RAM above them is left to the stack.
+STACK_FLOOR = 0x8001D000
+# Lowest address the injected blocks can reach: the game keeps its memory card save buffer at 0x80010000, and the BIOS
+# its data below
+LOWEST_ADDRESS = 0x80012000
 
 
 class ExeError(Exception):
@@ -157,7 +164,8 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
         seed_name, VERSION_OFFSET - SEED_NAME_OFFSET)
     struct.pack_into("<I", exe, mailbox_offset + VERSION_OFFSET, PROTOCOL_VERSION)
 
-    # Blocks are injected in front of the code, each one below the previous ones
+    # Blocks are injected in front of the code, below the stack (see STACK_FLOOR), each one below the previous ones
+    top = min(code_start, STACK_FLOOR)
     blocks: list[bytes] = []
     size = 0
 
@@ -165,7 +173,7 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
         nonlocal size
         blocks.append(block)
         size += len(block)
-        return code_start - size
+        return top - size
 
     def hook(call_address: int, original_target: int, target: int) -> None:
         site = slice(offset(call_address), offset(call_address) + 4)
@@ -270,11 +278,12 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
     message.j(FUN_SHOW_MESSAGE)
     hook(ITEM_MESSAGE_CALL, FUN_SHOW_MESSAGE, inject(message.to_bytes()))
 
-    # Prepend the blocks, the last one injected being the lowest, and update the header
-    expansion = -(-size // EXPANSION_STEP) * EXPANSION_STEP
+    # Prepend the blocks, the last one injected being the lowest, then the room left to the stack, and update the header
+    stack_room = code_start - top
+    expansion = -(-(size + stack_room) // EXPANSION_STEP) * EXPANSION_STEP
     if code_start - expansion < LOWEST_ADDRESS:
         raise ExeError("Not enough free RAM for the Archipelago code")
-    prepended = bytes([0xFF]) * (expansion - size) + b"".join(reversed(blocks))
+    prepended = bytes([0xFF]) * (expansion - size - stack_room) + b"".join(reversed(blocks)) + bytes(stack_room)
     exe[HEADER_SIZE:HEADER_SIZE] = prepended
     struct.pack_into("<I", exe, 0x18, code_start - expansion)
     code_size, = struct.unpack_from("<I", exe, 0x1C)
