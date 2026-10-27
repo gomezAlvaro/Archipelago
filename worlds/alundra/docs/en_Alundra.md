@@ -3,7 +3,8 @@
 ## Where is the options page?
 
 The [player options page for this game](../player-options) contains the options you need to configure and export a
-config file. Alundra has no options yet: every player uses the same settings as the randomizer's default preset.
+config file. The only Alundra option is "Vanilla Crests", which keeps every crest in its original location; the rest
+uses the same settings as the randomizer's default preset.
 
 ## What does randomization do to this game?
 

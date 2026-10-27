@@ -26,3 +26,18 @@ class TestGeneration(AlundraTestBase):
         self.assertFalse(self.can_reach_location(location))
         self.collect_by_name("Bomb")
         self.assertTrue(self.can_reach_location(location))
+
+
+class TestVanillaCrests(AlundraTestBase):
+    options = {"vanilla_crests": True}
+
+    def test_crests_stay_in_their_original_locations(self) -> None:
+        from .. import VANILLA_CREST_LOCATIONS
+
+        self.assertFalse(any(item.name in data.CRESTS for item in self.multiworld.itempool))
+        for location_name, crest in VANILLA_CREST_LOCATIONS.items():
+            item = self.multiworld.get_location(location_name, 1).item
+            self.assertEqual((item.name, item.player), (crest, 1), location_name)
+
+    def test_pool_matches_locations(self) -> None:
+        self.assertEqual(len(self.multiworld.get_unfilled_locations(1)), len(self.multiworld.itempool))

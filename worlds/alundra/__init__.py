@@ -19,6 +19,16 @@ CLASSIFICATIONS = {
 }
 
 
+# Original location of each crest the client can track (Topaz and Diamond are always in LOCKED_LOCATIONS)
+VANILLA_CREST_LOCATIONS = {
+    "Lars Crypt: Boss reward chest isolated to the left": "Ruby Crest",
+    "Reptile Lair: Left chest in boss reward room": "Sapphire Crest",
+    "Tower of the Great Tree (Summit): Left boss reward chest": "Agate Crest",
+    "Tower of the Great Tree (Summit): Right boss reward chest": "Garnet Crest",
+    "Torla Mountain: Boss reward chest": "Emerald Crest",
+}
+
+
 class AlundraItem(Item):
     game = "Alundra"
 
@@ -118,6 +128,10 @@ class AlundraWorld(World):
         for _, item_name in data.LOCKED_LOCATIONS.values():
             if pool.get(item_name, 0) > 0:
                 pool[item_name] -= 1
+        if self.options.vanilla_crests:
+            for location_name, crest in VANILLA_CREST_LOCATIONS.items():
+                self.get_location(location_name).place_locked_item(self.create_item(crest))
+                pool[crest] -= 1
 
         itempool = [self.create_item(name) for name, count in pool.items() for _ in range(count)]
         unfilled = len(self.multiworld.get_unfilled_locations(self.player)) - len(itempool)
