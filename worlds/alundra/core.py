@@ -136,6 +136,15 @@ class AlundraSync:
         await self._deliver(memory, mailbox, received)
         return result
 
+    @staticmethod
+    async def _can_open_a_box(memory: Memory) -> bool:
+        """No text window is open but the one open all through the game, and the memory card is not in use"""
+        windows = await memory.read(exe_hooks.TEXT_WINDOWS, exe_hooks.TEXT_WINDOW_COUNT * exe_hooks.TEXT_WINDOW_SIZE)
+        if any(windows[window * exe_hooks.TEXT_WINDOW_SIZE] & 1 for window in range(exe_hooks.TEXT_WINDOW_COUNT)
+               if window != exe_hooks.ALWAYS_OPEN_WINDOW):
+            return False
+        return await memory.read(exe_hooks.CARD_STATE, 4) == bytes(4)
+
     async def _deliver(self, memory: Memory, mailbox: bytes, received: list[ReceivedItem]) -> None:
         pending_item, _, pending_message = struct.unpack_from("<III", mailbox, 4)
         if pending_item or pending_message:
@@ -158,11 +167,11 @@ class AlundraSync:
         # taken until then. It copies the text when it opens a box, so the next request can't change a box on screen.
         if counter >= len(received):
             return
-        # A message box opened over the inventory menu jams the game (see exe_hooks.MENU_WINDOW_FLAGS). Newer games
-        # wait for the menu to close by themselves; this also protects games patched before they did.
-        menu = await memory.read(MENU_WINDOW_FLAGS, 2)
-        if menu[0] & 1:
+        # A message box opened over the inventory menu or the save screen jams the game (see exe_hooks.TEXT_WINDOWS).
+        # Newer games wait for them to close by themselves; this also protects games patched before they did.
+        if not await self._can_open_a_box(memory):
             return
+        menu = await memory.read(MENU_WINDOW_FLAGS, 2)
 
         item = received[counter]
         game_item = self.game_item_ids.get(item.item_id) or exe_hooks.NO_GAME_ITEM

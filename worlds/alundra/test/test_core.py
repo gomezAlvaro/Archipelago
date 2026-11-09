@@ -34,7 +34,7 @@ class FakeMemory:
 
     def game_processes_mailbox(self, message_box_open: bool = False) -> None:
         """What the patched game does once per frame"""
-        if self.ram[core.MENU_WINDOW_FLAGS & 0x1FFFFF] & 1:
+        if not run_sync(core.AlundraSync._can_open_a_box(self)):
             return
         base = core.MAILBOX & 0x1FFFFF
         item, target = struct.unpack_from("<II", self.ram, base + 4)
@@ -207,6 +207,26 @@ class TestSync(unittest.TestCase):
         self.memory.game_processes_mailbox()
         self.assertEqual(self.memory.inventory, [SWORD[2]])
         self.assertEqual(self.memory.messages, [f"Received item {SWORD[0]} from player 2"])
+
+    def test_waits_for_the_save_screen_to_close(self) -> None:
+        received = [core.ReceivedItem(SWORD[0], 12345, 2)]
+        save_list = exe_hooks.TEXT_WINDOWS + 10 * exe_hooks.TEXT_WINDOW_SIZE
+        for blocker, busy in ((save_list, b"\1\0"), (exe_hooks.CARD_STATE, struct.pack("<I", 1016))):
+            self.memory.write_at(blocker, busy)
+            run(self.sync.step(self.memory, received, set()))
+            self.assertEqual(run(self.memory.read(core.MAILBOX + 4, 12)), bytes(12))
+            self.memory.write_at(blocker, bytes(len(busy)))
+        run(self.sync.step(self.memory, received, set()))
+        self.memory.game_processes_mailbox()
+        self.assertEqual(self.memory.inventory, [SWORD[2]])
+
+    def test_the_window_open_all_through_the_game_does_not_block(self) -> None:
+        received = [core.ReceivedItem(SWORD[0], 12345, 2)]
+        self.memory.write_at(exe_hooks.TEXT_WINDOWS + exe_hooks.ALWAYS_OPEN_WINDOW * exe_hooks.TEXT_WINDOW_SIZE,
+                             b"\1\0")
+        run(self.sync.step(self.memory, received, set()))
+        self.memory.game_processes_mailbox()
+        self.assertEqual(self.memory.inventory, [SWORD[2]])
 
     def test_nothing_is_written_if_the_menu_opens_meanwhile(self) -> None:
         received = [core.ReceivedItem(SWORD[0], 12345, 2)]

@@ -123,12 +123,21 @@ class TestInstall(unittest.TestCase):
             self.assertEqual(word >> 26, 3)  # jal
             self.assertTrue(self.code_start <= target < CODE_START, hex(target))
 
-    def test_the_frame_hook_first_checks_the_inventory_menu(self) -> None:
+    def test_the_frame_hook_first_checks_the_windows_and_the_memory_card(self) -> None:
         word, = struct.unpack_from("<I", self.result, self.offset(exe_hooks.FRAME_HOOK_CALL))
         tick = self.offset((word & 0x03FFFFFF) << 2 | 0x80000000)
-        expected = MipsCode().set_(T0, exe_hooks.MENU_WINDOW_FLAGS).lhu(T1, T0, 0).andi(T1, T1, 1).to_bytes()
+        code = self.result[tick + 8:tick + 0x200]
+        menu = MipsCode().lhu(T1, T0, exe_hooks.MENU_WINDOW_FLAGS - exe_hooks.TEXT_WINDOWS).andi(T1, T1, 1).to_bytes()
+        save_list = MipsCode().lhu(T1, T0, 10 * exe_hooks.TEXT_WINDOW_SIZE).andi(T1, T1, 1).to_bytes()
+        always_open = MipsCode().lhu(T1, T0, exe_hooks.ALWAYS_OPEN_WINDOW * exe_hooks.TEXT_WINDOW_SIZE).to_bytes()
+        card = MipsCode().set_(T0, exe_hooks.CARD_STATE).lw(T1, T0, 0).to_bytes()
+        mailbox = MipsCode().set_(T0, exe_hooks.MAILBOX_ADDRESS).to_bytes()
         # Right after saving the return address, before the mailbox is read
-        self.assertEqual(self.result[tick + 8:tick + 8 + len(expected)], expected)
+        self.assertTrue(code.startswith(MipsCode().set_(T0, exe_hooks.TEXT_WINDOWS).to_bytes()))
+        self.assertLess(code.index(menu), code.index(mailbox))
+        self.assertLess(code.index(save_list), code.index(mailbox))
+        self.assertLess(code.index(card), code.index(mailbox))
+        self.assertNotIn(always_open, code)
 
     def test_table_of_texts(self) -> None:
         position = self.result.index(struct.pack("<I", 0x680) + b"Sent Hookshot to Link\0")

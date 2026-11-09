@@ -15,7 +15,7 @@ Mailbox layout (little-endian words, at MAILBOX_ADDRESS):
     +164 name of the multiworld seed (null-terminated, up to 23 characters)
     +188 PROTOCOL_VERSION (0 in games built before it existed)
 
-Once per frame, unless the inventory menu is open, the game checks the mailbox, gives the requested item through its
+Once per frame, unless a menu, the save screen or another text window is open, the game checks the mailbox, gives the requested item through its
 own item pickup routine and counts it in the save, shows the message if there is one and frees the mailbox. A chest
 holding an item of another world gives nothing and opens a box whose text is baked into a table of (story flag of the
 chest, text).
@@ -60,12 +60,18 @@ FUN_CAN_CARRY = 0x80034458
 # Returns non-zero while a message box is open (the game checks it before opening its own)
 FUN_MESSAGE_BUSY = 0x80045F8C
 # The game's text windows: 13 entries of 0x1C bytes, whose first halfword has bit 0 set while the window is open.
-# Window 6 is the inventory menu. A message box opened over it makes the game add the letters of the box twice to
+# Window 1 is open all through the game. Window 6 is the inventory menu, and the save screen uses windows 3 (yes/no),
+# 9 and 10 (list of saves). A message box opened over one of them makes the game add the letters of the box twice to
 # the same drawing list, which then loops: the GPU never finishes a frame and the game crawls (one frame every few
-# seconds, kept by save states) until the console is reset.
+# seconds, kept by save states) until the console is reset. Nothing is given while a window other than 1 is open.
 TEXT_WINDOWS = 0x80107570
 TEXT_WINDOW_SIZE = 0x1C
+TEXT_WINDOW_COUNT = 13
+ALWAYS_OPEN_WINDOW = 1
 MENU_WINDOW_FLAGS = TEXT_WINDOWS + 6 * TEXT_WINDOW_SIZE
+# State of the memory card routine, 0 when idle. A save writes the game's RAM to the card over several frames, the
+# received item counter included: nothing is given until it is done.
+CARD_STATE = 0x800C67E8
 FUN_PLAY_SOUND = 0x8004A128
 ITEM_JINGLE_SOUND = 0x34
 # Start of the branch of the game starting its ending: its first call is hooked to flag the goal as reached
@@ -185,10 +191,16 @@ def install(exe: bytes, slot_name: str, seed_name: str, texts: list[tuple[int, s
     tick.addiu(SP, SP, -0x20)
     tick.sw(RA, SP, 0x18)
 
-    # Nothing is given or shown while the inventory menu is open: the request waits in the mailbox
-    tick.set_(T0, MENU_WINDOW_FLAGS)
-    tick.lhu(T1, T0, 0)
-    tick.andi(T1, T1, 1)
+    # Nothing is given or shown while a window (inventory menu, save screen, dialogue...) is open or the memory card is
+    # in use: the request waits in the mailbox
+    tick.set_(T0, TEXT_WINDOWS)
+    for window in range(TEXT_WINDOW_COUNT):
+        if window != ALWAYS_OPEN_WINDOW:
+            tick.lhu(T1, T0, window * TEXT_WINDOW_SIZE)
+            tick.andi(T1, T1, 1)
+            tick.bne(T1, ZERO, "done")
+    tick.set_(T0, CARD_STATE)
+    tick.lw(T1, T0, 0)
     tick.bne(T1, ZERO, "done")
 
     tick.set_(T0, MAILBOX_ADDRESS)
